@@ -71,9 +71,9 @@ function dab(title) {
 	function process_page(err, data, num) {
 		var page_id = keys(data['query']['pages']);
 		var page_content = data['query']['pages'][page_id]['revisions']['0']['*'];
-		var pattern = '(?:[^\s\r\n]*[\s\r\n]+){0,10}(?:[^\s\r\n]*)' + title_fm.toLowerCase() + '(?:[^\s\r\n]*)(?:[\s\r\n]+[^\s\r\n]*){0,7}';
-		found_string = page_content.toLowerCase().match(pattern);
-		found_string = found_string[0]; // TODO: trim down that punctation		
+		var pattern = new RegExp('(?:[^\s\r\n]*[\s\r\n]+){0,10}(?:[^\s\r\n]*)\\[\\[' + title_fm + '(?:[^\s\r\n]*)(?:[\s\r\n]+[^\s\r\n]*){0,7}', 'ig');
+		found_string = page_content.match(pattern);
+		found_string = found_string[0].replace(RegExp('(\\[\\[' + title_fm + ')', 'i'), '<span style=\'background-color: yellow\'>$1</span>');		
 		
 		console.log('found ' + title_fm + ' in ' + data['query']['pages'][page_id]['title'])
 		render();

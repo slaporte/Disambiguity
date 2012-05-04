@@ -2,7 +2,8 @@
 * DAB game
 */
 
-var global_timeout = 30000;
+var global_timeout = 5000;
+var retry_limit = 4; /* global retry number */
 
 function random_int (min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -47,7 +48,7 @@ function do_query(url, complete_callback, kwargs) {
 }
 
 function dab(title) {
-	var title_fm = title.replace('_', ' ');
+	var title_fm = title.replace(/_/g, ' ');
 	var choices, 
 		found_string;
 
@@ -71,25 +72,35 @@ function dab(title) {
 	function process_page(err, data, num) {
 		var page_id = keys(data['query']['pages']);
 		var page_content = data['query']['pages'][page_id]['revisions']['0']['*'];
-		var pattern = new RegExp('(?:[^\s\r\n]*[\s\r\n]+){0,10}(?:[^\s\r\n]*)\\[\\[' + title_fm + '(?:[^\s\r\n]*)(?:[\s\r\n]+[^\s\r\n]*){0,7}', 'ig');
-		found_string = page_content.match(pattern);
-		found_string = found_string[0].replace(RegExp('(\\[\\[' + title_fm + ')', 'i'), '<span style=\'background-color: yellow\'>$1</span>');		
-		
-		console.log('found ' + title_fm + ' in ' + data['query']['pages'][page_id]['title'])
-		render();
+		if(page_content.match(/<ol><li>REDIRECT/gi)) {
+			console.log('no redirects, please');
+			redo(retry_limit);
+		} else {
+			var pattern = new RegExp('(?:[^\s\r\n]*[\s\r\n]+){0,15}(?:[^\s\r\n]*)<a href=\"\/wiki\/' + title + '(?:[^\s\r\n]*)(?:[\s\r\n]+[^\s\r\n]*){0,10}', 'ig');
+			found_string = page_content.match(pattern);
+			if(!found_string) {
+				redo(retry_limit);
+			} else {
+				var replace_pattern = RegExp('(<a href=\"\/wiki\/' + title + '.*?<\/a>)', 'ig');
+				found_string = found_string[0].replace(replace_pattern, '<span style=\'background-color: yellow\'>$1</span>');		
+				//found_string = found_string[0];
+				console.log('found ' + title_fm + ' in ' + data['query']['pages'][page_id]['title'])
+				render();
+			}
+		}
 	}
 
 	function choose_page(err, pages) {
 		var num = random_int(0, pages.length - 1);
 		var page = pages[num];
-		var page_content = do_query('http://en.wikipedia.org/w/api.php?action=query&prop=revisions&pageids=' + page + '&rvprop=content&format=json', process_page);
+		var page_content = do_query('http://en.wikipedia.org/w/api.php?action=query&prop=revisions&rvparse&pageids=' + page + '&rvprop=content&format=json', process_page);
 		console.log('loading pageid ' + page + '');
 	}
 
 	function render(err) {
 		$(document).ready(function() {
 			$('#phrase').html('<p><em>In the phrase</em></p><p>' + found_string + '</p>');
-			$('#inst').html('<p><em>Does ' + title_fm + ' mean</em></p>');
+			$('#inst').html('<p><em>Does the highlighted link mean:</em></p>');
 			for(var i = 0; i < choices.length; i++) {
 				$('#as').append('<li>' + choices[i] + '</li>');
 			}
@@ -100,4 +111,30 @@ function dab(title) {
 	do_query('http://en.wikipedia.org/w/api.php?action=query&list=backlinks&bltitle=' + title + '&prop=revisions&titles=' + title + '&rvprop=content&bllimit=500&format=json', process_backlinks);
 }
 
-var a = new dab('Animal_behaviour');
+function get_dabs() {
+	do_query('http://en.wikipedia.org/w/api.php?action=query&list=categorymembers&cmtitle=Category:Disambiguation_pages_with_links&prop=info&cmlimit=500&format=json', process_dabs);
+}
+
+function process_dabs(err, data) {
+	var dabs = data['query']['categorymembers'];
+	var todo = []
+	console.log(dabs)
+	for(var i = 0; i < dabs.length; i++) {
+		todo.push(dabs[i]['title'].replace('Talk:', '').replace(/\s/gi, '_'))
+	}
+	
+	var quiz = new dab(todo[random_int(0, todo.length - 1)]);
+}
+
+function redo(limit) {
+	if(limit > 0 ) {
+		retry_limit -= 1;
+		console.log('Something is awry! ' + retry_limit +' retries left');
+		get_dabs();
+	} else {
+		$('#phrase').html('<h1>I just give up....</h1>');
+	}
+	
+}
+
+get_dabs();

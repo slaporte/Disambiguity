@@ -24,7 +24,7 @@ function do_query(url, complete_callback, kwargs) {
         url: url,
         type: 'get',
         dataType: 'jsonp',
-        timeout: global_timeout, // TODO: convert to setting. Necessary to detect jsonp error.
+        timeout: global_timeout,
         success: function(data) {
             console.log('successful ajax query to ' + url);
             complete_callback(null, data);
@@ -48,62 +48,58 @@ function do_query(url, complete_callback, kwargs) {
     $.ajax(all_kwargs);
 }
 
-function dab(title) {
-	var title_fm = title.replace(/_/g, ' ');
-	var choices, 
-		found_phrase;
+/*
+ get list of pages needing fix
+ 	 http://en.wikipedia.org/wiki/Category:Articles_with_links_needing_disambiguation_from_June_2011
+ get random page to fix
+ get the dab link
+ 	$('span:contains("disambiguation needed")').parents('sup').prev('a')
+ get the dab page
+ */
 
-	function process_backlinks(err, data) {
-		console.log('processing the backlinks')
-		var links = data['query']['backlinks'];
+function dab(article) {
+	var title_fm = article.title;
+	var title =	article.title.replace(/ /g, '_');
+	var page = article.pageid;
+	var choices, 
+		found_phrase,
+		page_content,
+		dab_page_title;
+
+	function process_dab_page(err, data) {
+		console.log('processing the dab page')
 		var page_id = keys(data['query']['pages']);
 		var dab_content = data['query']['pages'][page_id]['revisions']['0']['*'];
-		var dabs;
-		var pages = [];
-		for(var i = 0; i < links.length; i++) {
-			if(links[i].ns === 0){
-				pages.push(links[i].pageid);
-			}
-		}
 
 		choices = dab_content.match(/\*.*\n/gi);
 		
-		choose_page(err, pages);
+		render();
 	}
 
-	function process_page(err, data, num) {
+	function process_page(err, data) {
 		console.log('processing the page')
 		var page_id = keys(data['query']['pages']);
 		var page_content = data['query']['pages'][page_id]['revisions']['0']['*'];
 		if(page_content.match(/<ol><li>REDIRECT/gi)) {
+			//look at headnote too
 			console.log('no redirects, please');
 			redo(retry_limit);
 		} else {
-//			var pattern = new RegExp('(?:[^\s\r\n]*[\s\r\n]+){0,15}(?:[^\s\r\n]*)<a href=\"\/wiki\/' + title + '(?:[^\s\r\n]*)(?:[\s\r\n]+[^\s\r\n]*){0,10}', 'ig');
-			
-			found_phrase = $('a[href="/wiki/' + title + '"]', page_content).parent();
-
-//			found_string = page_content.match(pattern);
+			dab_page_title = $('span:contains("disambiguation needed")', page_content).parents('sup').prev('a').attr('title').replace(' ', '_');
+			do_query('http://en.wikipedia.org/w/api.php?action=query&prop=revisions&titles=' + dab_page_title + '&rvprop=content&format=json', process_dab_page)
+			found_phrase = $('a[href="/wiki/' + dab_page_title + '"]', page_content).parent();
 			if(!found_phrase) {
 				redo(retry_limit);
 			} else {
-				console.log('found ' + title_fm + ' in ' + data['query']['pages'][page_id]['title']);
-				render();
+				console.log('found ' + title_fm + ' in ' + dab_page_title);
 			}
 		}
-	}
-
-	function choose_page(err, pages) {	
-		var num = random_int(0, pages.length - 1);
-		var page = pages[num];
-		var page_content = do_query('http://en.wikipedia.org/w/api.php?action=query&prop=revisions&rvparse&pageids=' + page + '&rvprop=content&format=json', process_page);
-		console.log('loading pageid ' + page + '');
 	}
 
 	function render(err) {
 		$('#phrase').html('<p><em>In the phrase</em></p><p id="phrase-content"></p>');
 		$('#phrase-content').html(found_phrase);
-		$('#phrase-content a[href="/wiki/' + title + '"]').css('background-color', 'yellow');
+		$('#phrase-content a[href="/wiki/' + dab_page_title + '"]').css('background-color', 'yellow');
 		$('#inst').html('<p><em>Does the highlighted link mean:</em></p>');
 		for(var i = 0; i < choices.length; i++) {
 			$('#as').append('<li>' + choices[i] + '</li>');
@@ -111,27 +107,22 @@ function dab(title) {
 		console.log('preparing html');
 	}
 
-	do_query('http://en.wikipedia.org/w/api.php?action=query&list=backlinks&bltitle=' + title + '&prop=revisions&titles=' + title + '&rvprop=content&bllimit=500&format=json', process_backlinks);
+	do_query('http://en.wikipedia.org/w/api.php?action=query&prop=revisions&rvparse&pageids=' + page + '&rvprop=content&format=json', process_page);
 }
 
 function get_dabs() {
-	do_query('http://en.wikipedia.org/w/api.php?action=query&list=categorymembers&cmtitle=Category:Disambiguation_pages_with_links&prop=info&cmlimit=500&format=json', process_dabs);
+	do_query('http://en.wikipedia.org/w/api.php?action=query&list=categorymembers&cmtitle=Category:Articles_with_links_needing_disambiguation_from_June_2011&prop=info&cmlimit=500&format=json', process_dabs);
 }
 
 function process_dabs(err, data) {
-	var dabs = data['query']['categorymembers'];
-	var todo = []
-	console.log('choosing among ' + dabs.length + ' dabs with links to fix')
-	console.log(dabs)
-	for(var i = 0; i < dabs.length; i++) {
-		todo.push(dabs[i]['title'].replace('Talk:', '').replace(/\s/gi, '_'))
-	}
-	
-	var quiz = new dab(todo[random_int(0, todo.length - 1)]);
+	var articles = data['query']['categorymembers'];
+	// save article list?
+	console.log('choosing among ' + articles.length + ' articles with links to fix');	
+	var quiz = new dab(articles[random_int(0, articles.length - 1)]);
 }
 
 function redo(limit) {
-	console.log('redoing')
+	console.log('redoing');
 	if(limit > 0 ) {
 		retry_limit -= 1;
 		console.log('Something is awry! ' + retry_limit +' retries left');

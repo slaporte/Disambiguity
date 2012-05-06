@@ -133,4 +133,41 @@ function redo(limit) {
 	
 }
 
+function edit () {
+	$.ajax({
+	  url: 'http://en.wikipedia.org/w/api.php',
+	  data: 'action=query&prop=info|revisions&rvprop=content&intoken=edit&titles=User:Slaporte&format=jsonp',
+	  success: function( data ) {
+	      myToken = data;
+	  }
+	});
+
+	var sendData = {
+	  action: 'edit',
+	  format: 'json',
+	  title: myPageName,
+	  text: myPageText,
+	  summary: myEditSummary,
+	  token: '+\\'
+	};
+
+	$.ajax({
+	  url: 'http://en.wikipedia.org/w/api.php',
+	  data: sendData,
+	  dataType: 'json',
+	  type: 'POST',
+	  success: function( data ) {
+	    if ( data.edit.result == "Success" ) {
+	      // Do something else
+	    } else {
+	      console.debug( 'Unknown result from API.' );
+	    }
+	  },
+	  error: function( xhr ) {
+	    console.debug( 'Edit failed.' );
+	    console.debug( xhr.responseText );
+	  }
+	});
+}
+
 get_dabs();

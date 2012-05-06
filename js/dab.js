@@ -32,11 +32,12 @@ function do_query(url, complete_callback, kwargs) {
         error: function(jqXHR, textStatus, errorThrown) {
             console.log('failed query to ' + url);
             complete_callback(errorThrown, null);
+            redo(retry_limit);
         },
         complete: function(jqXHR, textStatus) {
             // TODO: error handling (jsonp doesn't get error() calls for a lot of errors)
         },
-        headers: { 'User-Agent': 'DABble/0.0.0 stephen laporte stephen.laporte@gmail.com' }
+        headers: { 'User-Agent': 'DAB/0.0.0 stephen laporte stephen.laporte@gmail.com' }
     };
 
     for (var key in kwargs) {
@@ -50,9 +51,10 @@ function do_query(url, complete_callback, kwargs) {
 function dab(title) {
 	var title_fm = title.replace(/_/g, ' ');
 	var choices, 
-		found_string;
+		found_phrase;
 
 	function process_backlinks(err, data) {
+		console.log('processing the backlinks')
 		var links = data['query']['backlinks'];
 		var page_id = keys(data['query']['pages']);
 		var dab_content = data['query']['pages'][page_id]['revisions']['0']['*'];
@@ -70,27 +72,28 @@ function dab(title) {
 	}
 
 	function process_page(err, data, num) {
+		console.log('processing the page')
 		var page_id = keys(data['query']['pages']);
 		var page_content = data['query']['pages'][page_id]['revisions']['0']['*'];
 		if(page_content.match(/<ol><li>REDIRECT/gi)) {
 			console.log('no redirects, please');
 			redo(retry_limit);
 		} else {
-			var pattern = new RegExp('(?:[^\s\r\n]*[\s\r\n]+){0,15}(?:[^\s\r\n]*)<a href=\"\/wiki\/' + title + '(?:[^\s\r\n]*)(?:[\s\r\n]+[^\s\r\n]*){0,10}', 'ig');
-			found_string = page_content.match(pattern);
-			if(!found_string) {
+//			var pattern = new RegExp('(?:[^\s\r\n]*[\s\r\n]+){0,15}(?:[^\s\r\n]*)<a href=\"\/wiki\/' + title + '(?:[^\s\r\n]*)(?:[\s\r\n]+[^\s\r\n]*){0,10}', 'ig');
+			
+			found_phrase = $('a[href="/wiki/' + title + '"]', page_content).parent();
+
+//			found_string = page_content.match(pattern);
+			if(!found_phrase) {
 				redo(retry_limit);
 			} else {
-				var replace_pattern = RegExp('(<a href=\"\/wiki\/' + title + '.*?<\/a>)', 'ig');
-				found_string = found_string[0].replace(replace_pattern, '<span style=\'background-color: yellow\'>$1</span>');		
-				//found_string = found_string[0];
-				console.log('found ' + title_fm + ' in ' + data['query']['pages'][page_id]['title'])
+				console.log('found ' + title_fm + ' in ' + data['query']['pages'][page_id]['title']);
 				render();
 			}
 		}
 	}
 
-	function choose_page(err, pages) {
+	function choose_page(err, pages) {	
 		var num = random_int(0, pages.length - 1);
 		var page = pages[num];
 		var page_content = do_query('http://en.wikipedia.org/w/api.php?action=query&prop=revisions&rvparse&pageids=' + page + '&rvprop=content&format=json', process_page);
@@ -98,14 +101,14 @@ function dab(title) {
 	}
 
 	function render(err) {
-		$(document).ready(function() {
-			$('#phrase').html('<p><em>In the phrase</em></p><p>' + found_string + '</p>');
-			$('#inst').html('<p><em>Does the highlighted link mean:</em></p>');
-			for(var i = 0; i < choices.length; i++) {
-				$('#as').append('<li>' + choices[i] + '</li>');
-			}
-			console.log('prepared html');
-		});
+		$('#phrase').html('<p><em>In the phrase</em></p><p id="phrase-content"></p>');
+		$('#phrase-content').html(found_phrase);
+		$('#phrase-content a[href="/wiki/' + title + '"]').css('background-color', 'yellow');
+		$('#inst').html('<p><em>Does the highlighted link mean:</em></p>');
+		for(var i = 0; i < choices.length; i++) {
+			$('#as').append('<li>' + choices[i] + '</li>');
+		}
+		console.log('preparing html');
 	}
 
 	do_query('http://en.wikipedia.org/w/api.php?action=query&list=backlinks&bltitle=' + title + '&prop=revisions&titles=' + title + '&rvprop=content&bllimit=500&format=json', process_backlinks);
@@ -118,6 +121,7 @@ function get_dabs() {
 function process_dabs(err, data) {
 	var dabs = data['query']['categorymembers'];
 	var todo = []
+	console.log('choosing among ' + dabs.length + ' dabs with links to fix')
 	console.log(dabs)
 	for(var i = 0; i < dabs.length; i++) {
 		todo.push(dabs[i]['title'].replace('Talk:', '').replace(/\s/gi, '_'))
@@ -127,6 +131,7 @@ function process_dabs(err, data) {
 }
 
 function redo(limit) {
+	console.log('redoing')
 	if(limit > 0 ) {
 		retry_limit -= 1;
 		console.log('Something is awry! ' + retry_limit +' retries left');

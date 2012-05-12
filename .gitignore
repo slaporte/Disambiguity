@@ -1,0 +1,15 @@
+pub/
+.DS_Store
+*~
+._*
+.\#*
+\#*\#
+*.csv
+*.json
+log*
+article_html/*.html
+
+*.pyc*
+*.pyo*
+
+node_modules

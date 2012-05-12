@@ -7,6 +7,7 @@
 
 import requests
 import json
+import random
 from pyquery import PyQuery as pq
 
 from collections import namedtuple
@@ -147,11 +148,15 @@ def get_dab_options(dab_page_title):
 
 # <codecell>
 
-import random
+def get_random_articles(sample=10):
+    page_range = random.sample(z.get_dab_page_ids(), sample)
+    for page in page_range:
+
+
+# <codecell>
 
 class Dabblet(object):
-    def __init__(self, sample=10):
-        self.range = random.sample(z.get_dab_page_ids(), 3)
+    def __init__(self):
         
 
 # <codecell>

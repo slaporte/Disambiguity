@@ -1,0 +1,11 @@
+* Improve heuristic for finding relevant link within Dab options
+* Find/replace Dab answer within unparsed wiki text
+* Implement higher-bound for length of dab link context
+* Handle redirect articles (skip em)
+* get_dab_page_ids support date call
+* get_category support paging/recursion
+
+== Service APIs
+* Get Dabblet
+* Post Dabblet change
+* Get stats

@@ -1,14 +1,7 @@
-# -*- coding: utf-8 -*-
-# <nbformat>2</nbformat>
-
-# <codecell>
-
 import gevent
 import socket
 from gevent import monkey
-#monkey.patch_all()
-
-# <codecell>
+monkey.patch_all()
 
 import requests
 import json
@@ -17,15 +10,31 @@ import random
 from pyquery import PyQuery as pq
 
 # stupid ipy notebook
-sum = __builtins__.sum
 
 from collections import namedtuple
 
 API_URL = "http://en.wikipedia.org/w/api.php"
 
-# <codecell>
-
 class WikiException(Exception): pass
+
+Page = namedtuple("ParsedPage", "pageid, title, revisionid, revisiontext, is_parsed, fetch_date")
+
+DabOption = namedtuple("DabOption", "title, text, dab_title")
+
+class Dabblet(object):
+    def __init__(self, title, context, source_page, source_order):
+        self.title        = title
+        self.context      = context
+        self.source_page  = source_page
+        self.source_order = source_order
+        
+        self.options = get_dab_options(title)
+
+    def _asdict(self):
+        return {'title': self.title,
+                'context': self.context,
+                'options': [ o._asdict() for o in self.options ]
+                }
 
 def api_req(action, params=None, raise_exc=False, **kwargs):
     all_params = {'format': 'json',
@@ -67,7 +76,6 @@ def api_req(action, params=None, raise_exc=False, **kwargs):
     
     return resp
 
-# <codecell>
 
 def get_category(cat_name, count=500):
     params = {'list': 'categorymembers', 
@@ -76,6 +84,7 @@ def get_category(cat_name, count=500):
               'cmlimit': count}
     return api_req('query', params)
     
+
 def get_dab_page_ids(date=None, count=500):
     cat_res = get_category("Articles_with_links_needing_disambiguation_from_June_2011", count)
     # TODO: Continue query?
@@ -83,9 +92,6 @@ def get_dab_page_ids(date=None, count=500):
     return [ a['pageid'] for a in 
              cat_res.results['query']['categorymembers'] ]
 
-# <codecell>
-
-Page = namedtuple("ParsedPage", "pageid, title, revisionid, revisiontext, is_parsed, fetch_date")
 
 def get_articles(page_id=None, title=None, parsed=True, follow_redirects=False):
     ret = []
@@ -107,7 +113,7 @@ def get_articles(page_id=None, title=None, parsed=True, follow_redirects=False):
         params['rvparse'] = 'true'
     if follow_redirects:
         params['redirects'] = 'true'
-    # ret=return, req=request, resp=response, res=result(s)
+
     parse_resp = api_req('query', params)
     if parse_resp.results:
         ret = [Page( pageid = page['pageid'],
@@ -119,14 +125,12 @@ def get_articles(page_id=None, title=None, parsed=True, follow_redirects=False):
                for page in parse_resp.results['query']['pages'].values()]
     return ret
 
-# <codecell>
 
 def is_fixable_dab_link(parsed_page):
     # Check for redirect
     # Check for hat notes
     pass
 
-DabOption = namedtuple("DabOption", "title, text, dab_title")
 
 def get_dab_options(dab_page_title):
     ret = []
@@ -144,25 +148,19 @@ def get_dab_options(dab_page_title):
     
     return ret
 
-class Dabblet(object):
-    def __init__(self, dab_title, link_context, source_page, source_order):
-        self.dab_title    = dab_title
-        self.context      = link_context
-        self.source_page  = source_page
-        self.source_order = source_order
-        
-        self.options = get_dab_options(dab_title)
-        
+
 def get_context(dab_a):
     d = dab_a(dab_a.parents()[0])
     link_parents = dab_a.parents()
-    cand_contexts = [ p for p in link_parents if p.text_content() and len(p.text_content().split()) > 30 ]
+    cand_contexts = [ p for p in link_parents 
+                      if p.text_content() and len(p.text_content().split()) > 30 ]
     chosen_context = cand_contexts[-1]
     d(chosen_context).addClass('dab-context')
     # add upperbound/wrapping div
     return d(chosen_context)
     
 def get_dabblets(parsed_page):
+    "Call with a Page object, the type you'd get from get_articles()"
     ret = []
     d = pq(parsed_page.revisiontext)
     dab_link_markers = d('span:contains("disambiguation needed")')
@@ -181,13 +179,9 @@ def get_dabblets(parsed_page):
             
     return ret
 
-# <codecell>
-
 def get_random_dabblets(count=2):
     dabblets = []
     page_ids = random.sample(get_dab_page_ids(count=count), count)
     articles = get_articles(page_ids)
     dabblets.extend(sum([get_dabblets(a) for a in articles], []))
     return dabblets
-
-print get_random_dabblets()

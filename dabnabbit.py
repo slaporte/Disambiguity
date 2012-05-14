@@ -85,8 +85,8 @@ def get_dab_page_ids(date=None, count=500):
 
 def get_articles(page_ids=None, titles=None, parsed=True, follow_redirects=False, **kwargs):
     ret = []
-    params = {'prop':    'revisions',  
-              'rvprop':  'content|ids' }
+    params = {'prop':   'revisions',  
+              'rvprop': 'content|ids' }
 
     if page_ids:
         if not isinstance(page_ids, (str,unicode)):
@@ -153,7 +153,7 @@ def get_dab_choices(dabblets): # side effect-y..
         
         d = pq(dab_text)
         if not d('table#disambigbox'):
-            print dp.req_title, 'has no table#disambigbox, skipping.'
+            print 'Article "'+dp.req_title+'" has no table#disambigbox, skipping.'
             #print '(pulled in from', dabblet.source_title,')'
             continue
 
@@ -163,9 +163,12 @@ def get_dab_choices(dabblets): # side effect-y..
             # TODO: better heuristic than ":first" link?
             title = d(lia).find('a:first').attr('title') 
             text = lia.text_content().strip()
-            ret.append(DabChoice(dabblet=dabblet,
-                                 title=title, 
-                                 text=text))
+            if title and text:
+                ret.append(DabChoice(dabblet=dabblet,
+                                     title=title, 
+                                     text=text))
+            else:
+                print 'skippin a bogus link'
     
     return ret
 

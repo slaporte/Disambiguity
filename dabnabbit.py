@@ -13,7 +13,8 @@ from pyquery import PyQuery as pq
 
 from collections import namedtuple
 
-API_URL = "http://en.wikipedia.org/w/api.php"
+API_URL = 'http://en.wikipedia.org/w/api.php'
+EDIT_SUMMARY = 'DAB link solved with disambiguity!'
 
 class WikiException(Exception): pass
 
@@ -193,3 +194,30 @@ def get_random_dabblets(count=2):
     articles = get_articles(page_ids)
     dabblets.extend(sum([get_dabblets(a) for a in articles], []))
     return dabblets
+'''
+import re
+def replace_nth(n, repl):
+    def replace(match, c=[0]):
+        c[0] += 1
+        return repl if  c[0] == n else match.group(0)
+    return replace
+
+def replace_dablet(dabblet, guess):
+    article_text = get_articles(page_id=dabblet.source_page['pageid'], parsed=False)
+    dab_title = dabblet.title
+    dab_postition = dabblet.source_order
+    if article_text.revisionid === dabblet.source_page['revisionid']:
+        return re.sub('\[\[' + title + '(.*){{Disambiguation needed.*}}, replace_nth(dab_postition, '[[' + guess + '\g<1>'), article_text.revisiontext)
+    else:
+        return 'error: the revids don't match'
+
+def submit_solution(title, solution):
+    params = {'action': 'edit',
+            'format': 'json',
+            'title': title,
+            'text': solution,
+            'summary': EDIT_SUMMARY,
+            'token': '+\\'}
+    resp = api_req('query', params)
+    return resp
+'''

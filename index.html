@@ -1,12 +1,76 @@
 <html>
 <head>
 <script type="text/javascript" src="js/jquery.js"></script>
-<script type="text/javascript" src='js/dab.js'></script>
+<script type="text/javascript">
+
+	var global_timeout = 5000;
+
+	function random_int (min, max) {
+	    return Math.floor(Math.random() * (max - min + 1)) + min;
+	}
+
+	function do_query(url, complete_callback, kwargs) {
+	    var all_kwargs = {
+	        url: url,
+	        type: 'get',
+	        dataType: 'jsonp',
+	        timeout: global_timeout,
+	        success: function(data) {
+	            console.log('successful ajax query to ' + url);
+	            complete_callback(null, data);
+	        },
+	        error: function(jqXHR, textStatus, errorThrown) {
+	            console.log('failed query to ' + url);
+	            complete_callback(errorThrown, null);
+	        },
+	        complete: function(jqXHR, textStatus) {
+	            // TODO: error handling (jsonp doesn't get error() calls for a lot of errors)
+	        },
+	    };
+
+	    for (var key in kwargs) {
+	        if(kwargs.hasOwnProperty(key)) {
+	            all_kwargs[key] = kwargs[key];
+	        }
+	    }
+	    $.ajax(all_kwargs);
+	}
+
+	do_query('http://localhost:8080/fake/', page_setup);
+
+
+
+	function page_setup(err, data){
+		var rand_choice = random_int(0, data.dabs.length - 1);
+		console.log(rand_choice);
+		var dab 		= data.dabs[rand_choice];
+		var choices 	= dab.options,
+			page_title	= dab.page_title,
+			dab_title	= dab.title,
+			dab_context	= dab.context;
+		
+		$('#page_title').html(page_title);
+		$('#phrase').html(dab_title);
+		$('#context').html(dab_context);
+		$('span:contains("disambiguation")"').parents('sup').hide();
+		for(var i = 0; i < choices.length; i++) {
+			$('#choices').append('<li>' + choices[i].text + '</li>');
+		}
+	}
+</script>
+<style>
+.dab-link {
+	background-color: yellow;
+}
+</style>
 </head>
 <body>
 <h1>DAB game</h1>
+<p>Page: <span id='page_title'></span></p>
+<p>Dabblet: <span id='phrase'></span></p>
+<h2>context</h2>
 <div id='phrase'></div>
-<div id='inst'></div>
-<ul id='as'></ul>
+<div id='context'></div>
+<ul id='choices'></ul>
 </body>
 </html>

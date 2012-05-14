@@ -1,11 +1,43 @@
-* Improve heuristic for finding relevant link within Dab options
+
+== Tasks
+* Improve heuristic for finding relevant link within DabChoice
 * Find/replace Dab answer within unparsed wiki text
-* Implement higher-bound for length of dab link context
-* Handle redirect articles (skip em)
+* Implement upper-bounding for size of dab link context
+* Handle redirect articles with dab links (skip em)
 * get_dab_page_ids support date call
 * get_category support paging/recursion
 
+* Track Dabblets that are invalid (incorrect in some fashion)
+** Link to a non-disambiguation page (Check for table#disambigbox to be sure that the dab page is actually a dab page before generating choices)
+
+* Skip DabChoice links that don't have title attributes
+* Rate viability
+* Rate difficulty
+
 == Service APIs
 * Get Dabblet
+** Dabblet ID
+** Dab title
+** Source page title
+** Dab link context
+** Dab choices (target article title, choice text
+
 * Post Dabblet change
+** Dabblet ID
+** Dabblet choice ID
+** Number of pages looked at by solver before submitting?
+
 * Get stats
+** Dabblets solved
+** Dabblets served/viewed
+** Dabblet solutions submitted (if using redundancy)
+** Number of dabblets/dabchoices fetched into DB
+** Average number of DabChoices per Dabblet
+** Average number of Dabblets per page
+** Number of articles with Dabblets
+** Average difficulty of Dabblet (for solved and total)
+
+== Peewee enhancement ideas
+* Can't override __init__, even with decorators and inheritance
+* Can only pass keyword arguments?
+* Field default values

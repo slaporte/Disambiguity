@@ -23,6 +23,7 @@ class Dabblet(DabModel):
     source_order  = pw.IntegerField()
     source_pageid = pw.IntegerField()
     source_revid  = pw.IntegerField()
+    source_images = pw.TextField() # refactor to another table
 
     date_created  = pw.DateTimeField(db_index=True)
 
@@ -30,7 +31,8 @@ class Dabblet(DabModel):
     viability     = pw.IntegerField()
     
     @classmethod
-    def from_page(cls, title, context, source_page, source_order, **kw):
+    def from_page(cls, title, context, source_page, source_order, 
+                  source_images, **kw):
         # TODO: get options
         ret = cls(title = title,
                   context = context,
@@ -38,7 +40,9 @@ class Dabblet(DabModel):
                   source_pageid = source_page.pageid,
                   source_revid = source_page.revisionid,
                   source_order = source_order,
+                  source_images = source_images,
                   date_created = datetime.now())
+                  
         ret.source_page = source_page
         return ret
 
@@ -46,17 +50,9 @@ class Dabblet(DabModel):
         return {'title': self.title,
                 'source_title': self.source_title,
                 'context': self.context,
+                'images': self.source_images,
                 'options': [ o._asdict() for o in self.options ]
                 }
-
-
-    #def __init__(self, title, context, source_page, source_order):
-    #    self.title        = title
-    #    self.context      = context
-    #    self.source_page  = source_page
-    #    self.source_order = source_order
-    #    
-    #    self.options = [] # TODO: get_dab_options(title)
 
 
 class DabChoice(DabModel):

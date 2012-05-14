@@ -16,8 +16,10 @@ API_URL = "http://en.wikipedia.org/w/api.php"
 
 class WikiException(Exception): pass
 
-Page = namedtuple("Page", "title, req_title, pageid, revisionid, revisiontext, is_parsed, fetch_date")
 
+Page = namedtuple("Page", "title, req_title, pageid, revisionid, revisiontext, images, is_parsed, fetch_date")
+
+DabOption = namedtuple("DabOption", "title, text, dab_title")
 
 def api_req(action, params=None, raise_exc=False, **kwargs):
     all_params = {'format': 'json',
@@ -73,7 +75,6 @@ def get_category(cat_name, count=500):
               'cmlimit': count}
     return api_req('query', params)
     
-
 def get_dab_page_ids(date=None, count=500):
     cat_res = get_category("Articles_with_links_needing_disambiguation_from_June_2011", count)
     # TODO: Continue query?
@@ -178,6 +179,10 @@ def get_dabblets(parsed_page):
     "Call with a Page object, the type you'd get from get_articles()"
     ret = []
     d = pq(parsed_page.revisiontext)
+    page_title = parsed_page.title
+
+    images_found = [img.attrib['src'] for img in d('.thumbimage')][:3]
+
     dab_link_markers = d('span:contains("disambiguation needed")')
     for i, dlm in enumerate(dab_link_markers):
         try:
@@ -189,7 +194,12 @@ def get_dabblets(parsed_page):
         if dab_link.is_('a'):
             dab_title = dab_link.attr('title')
             context = get_context(dab_link)
-            ret.append( Dabblet.from_page(dab_title, context.outerHtml(), parsed_page, i) )
+
+            ret.append( Dabblet.from_page(dab_title, 
+                                          context.outerHtml(), 
+                                          parsed_page, 
+                                          i,
+                                          '||'.join(images_found)))
             
     return ret
 
@@ -269,3 +279,4 @@ def test():
 if __name__ == '__main__':
     dabblets = save_a_bunch(50)
     import pdb;pdb.set_trace()
+

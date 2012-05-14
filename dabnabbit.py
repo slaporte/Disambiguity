@@ -218,22 +218,31 @@ def get_random_dabblets(count=2):
     articles = get_articles(page_ids)
     dabblets.extend(sum([get_dabblets(a) for a in articles], []))
     return dabblets
-'''
-import re
-def replace_nth(n, repl):
-    def replace(match, c=[0]):
-        c[0] += 1
-        return repl if  c[0] == n else match.group(0)
-    return replace
 
-def replace_dablet(dabblet, guess):
-    article_text = get_articles(page_id=dabblet.source_page['pageid'], parsed=False)
+import re
+def replace_nth(n, guess):
+    def alternate(n):
+        i=0
+        while True:
+            i += 1
+            yield i%n == 0
+    gen = alternate(n)
+    def match(m):
+        replace = gen.next()
+        if replace:
+            return '[[' + guess + m.group(1)
+        else:
+            return m.group(0)
+    return match
+
+def replace_dabblet(dabblet, guess):
+    article_text = get_articles(page_ids=dabblet.source_page.pageid, parsed=False)[0]
     dab_title = dabblet.title
-    dab_postition = dabblet.source_order
-    if article_text.revisionid === dabblet.source_page['revisionid']:
-        return re.sub('\[\[' + title + '(.*){{Disambiguation needed.*}}, replace_nth(dab_postition, '[[' + guess + '\g<1>'), article_text.revisiontext)
+    dab_postition = dabblet.source_order + 1
+    if article_text.revisionid == dabblet.source_page.revisionid:
+        return re.sub('\[\[' + dab_title + '(.*){{Disambiguation needed.*}}', replace_nth(dab_postition, guess), article_text.revisiontext)
     else:
-        return 'error: the revids don't match'
+        return 'error: the revids don\'t match'
 
 def submit_solution(title, solution):
     params = {'action': 'edit',
@@ -244,7 +253,6 @@ def submit_solution(title, solution):
             'token': '+\\'}
     resp = api_req('query', params)
     return resp
-'''
 
 P_PER_CALL = 4
 DEFAULT_TIMEOUT = 30

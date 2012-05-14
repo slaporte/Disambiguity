@@ -16,8 +16,7 @@ API_URL = "http://en.wikipedia.org/w/api.php"
 
 class WikiException(Exception): pass
 
-
-Page = namedtuple("Page", "title, req_title, pageid, revisionid, revisiontext, images, is_parsed, fetch_date")
+Page = namedtuple("Page", "title, req_title, pageid, revisionid, revisiontext, is_parsed, fetch_date")
 
 DabOption = namedtuple("DabOption", "title, text, dab_title")
 
@@ -120,11 +119,12 @@ def get_articles(page_ids=None, titles=None, parsed=True, follow_redirects=False
             return ret
 
         redirects = dict([ (r['to'],r['from']) for r in redirect_list ])
+        # this isn't perfect since multiple pages might redirect to the same page
         for page in pages:
             title = page['title']
-            pa = Page( pageid = page['pageid'],
-                       title  = title,
+            pa = Page( title  = title,
                        req_title  = redirects.get(title, title),
+                       pageid = page['pageid'],
                        revisionid = page['revisions'][0]['revid'],
                        revisiontext = page['revisions'][0]['*'],
                        is_parsed = parsed,
@@ -210,53 +210,57 @@ def get_random_dabblets(count=2):
     dabblets.extend(sum([get_dabblets(a) for a in articles], []))
     return dabblets
 
+P_PER_CALL = 4
+DEFAULT_TIMEOUT = 30
+def green_call_list(func, arglist, per_call=P_PER_CALL, timeout=DEFAULT_TIMEOUT):
+    import time
+    fname = func.__name__
+    print 'calling', fname, 'on', len(arglist), 'items...'
+    start = time.time()
+    jobs = [gevent.spawn(func, arglist[i:i+per_call])
+            for i in
+            range(0, len(arglist), per_call)]
+    print 'using', len(jobs), 'green threads.'
+    gevent.joinall(jobs, timeout)
+    done_jobs = [j for j in jobs if j.value]
+    try:
+        ret = sum([j.value for j in done_jobs], [])
+    except TypeError as te:
+        print '(', fname, "'s results appear to not be iterable)"
+        ret = [ j.value for j in done_jobs ]
+
+    print '(', len(done_jobs), 'out of', len(jobs), 'jobs returned, with', 
+    print len(ret), 'results.)'
+    dur = time.time() - start
+    print 'done', fname, 'on', len(arglist), 'items in',
+    print dur, 'seconds.'
+
+    return ret
+
 def save_a_bunch(count=1000):
     import time
-    P_PER_CALL = 4
+
     db_name = 'abunch'
     dabase.init(db_name)
-    dabblets = []
+
+    start = time.time()
 
     page_ids = get_dab_page_ids(count=count)
+    pages    = green_call_list(get_articles, page_ids)
+    dabblets = sum([ get_dabblets(p) for p in pages ], [])
 
-    print 'fetching', len(page_ids), 'articles...'
-    start = time.time()
-    ajobs = [gevent.spawn(get_articles, page_ids[i:i+P_PER_CALL]) for i in range(0, len(page_ids), P_PER_CALL)]
-    print 'using', len(ajobs), 'green threads.'
-    gevent.joinall(ajobs, timeout=30)
-    print 'fetch done (t+', time.time() - start, 'seconds)'
-    for aj in ajobs:
-        articles = aj.value
-        if not articles:
-            continue
-        dabblets.extend(sum([get_dabblets(a) for a in articles], []))
-
-    get_dab_choices(dabblets[:1])
-
-    all_choices = []
-    print 'fetching choices for', len(dabblets), 'Dabblets.'
-    choices_start = time.time()
-
-    cjobs = [ gevent.spawn(get_dab_choices, dabblets[i:i+P_PER_CALL])
-              for i in
-              range(0, len(dabblets), P_PER_CALL) ]
-
-    print 'using', len(cjobs), 'green threads.'
-    gevent.joinall(cjobs, timeout=30)
-    print 'fetching choices done (t+', time.time() - choices_start, 'seconds)'
-    for cj in cjobs:
-        choices = cj.value
-        if not choices:
-            continue
-        all_choices.extend(choices)
-
+    # TODO start transaction
     for d in dabblets:
         d.save()
+
+    get_dab_choices(dabblets[:1]) # DEBUG
+
+    all_choices = green_call_list(get_dab_choices, dabblets)
+
     for c in all_choices:
         c.save()
 
     end = time.time()
-    fetched_len = len(dabblets)
 
     print len(dabblets), 'Dabblets saved to', db_name, 'in', end-start, 'seconds'
     print len(set([d.title for d in dabblets])), 'unique titles'
@@ -275,6 +279,9 @@ def test():
     print 'getting one article by list of IDs (list of one)'
     pid_articles = get_articles([4269567], raise_exc=True)
     assert len(pid_articles) > 0
+
+    title_article = get_articles(titles="Dog", raise_exc=True)
+    title_articles = get_articles(titles=["Dog"], raise_exc=True)
 
 if __name__ == '__main__':
     dabblets = save_a_bunch(50)

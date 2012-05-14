@@ -13,6 +13,7 @@ import dabase
 from dabase import Dabblet, DabChoice
 
 API_URL = "http://en.wikipedia.org/w/api.php"
+EDIT_SUMMARY = 'DAB link solved with disambiguity!'
 
 class WikiException(Exception): pass
 
@@ -97,7 +98,7 @@ def get_articles(page_ids=None, titles=None, parsed=True, follow_redirects=False
     elif titles:
         if not isinstance(titles, (str,unicode)):
             try:
-                titles = "|".join([str(t) for t in titles])
+                titles = "|".join([unicode(t) for t in titles])
             except:
                 print "Couldn't join: ",repr(titles)
         params['titles'] = titles
@@ -151,6 +152,11 @@ def get_dab_choices(dabblets): # side effect-y..
         dab_text = dp.revisiontext
         
         d = pq(dab_text)
+        if not d('table#disambigbox'):
+            print dp.req_title, 'has no table#disambigbox, skipping.'
+            #print '(pulled in from', dabblet.source_title,')'
+            continue
+
         d('table#toc').remove()
         liasons = set([ d(a).parents('li')[-1] for a in d('li a') ])
         for lia in liasons:
@@ -209,6 +215,33 @@ def get_random_dabblets(count=2):
     articles = get_articles(page_ids)
     dabblets.extend(sum([get_dabblets(a) for a in articles], []))
     return dabblets
+'''
+import re
+def replace_nth(n, repl):
+    def replace(match, c=[0]):
+        c[0] += 1
+        return repl if  c[0] == n else match.group(0)
+    return replace
+
+def replace_dablet(dabblet, guess):
+    article_text = get_articles(page_id=dabblet.source_page['pageid'], parsed=False)
+    dab_title = dabblet.title
+    dab_postition = dabblet.source_order
+    if article_text.revisionid === dabblet.source_page['revisionid']:
+        return re.sub('\[\[' + title + '(.*){{Disambiguation needed.*}}, replace_nth(dab_postition, '[[' + guess + '\g<1>'), article_text.revisiontext)
+    else:
+        return 'error: the revids don't match'
+
+def submit_solution(title, solution):
+    params = {'action': 'edit',
+            'format': 'json',
+            'title': title,
+            'text': solution,
+            'summary': EDIT_SUMMARY,
+            'token': '+\\'}
+    resp = api_req('query', params)
+    return resp
+'''
 
 P_PER_CALL = 4
 DEFAULT_TIMEOUT = 30
@@ -253,13 +286,11 @@ def save_a_bunch(count=1000):
     for d in dabblets:
         d.save()
 
-    get_dab_choices(dabblets[:1]) # DEBUG
-
     all_choices = green_call_list(get_dab_choices, dabblets)
 
     for c in all_choices:
         c.save()
-
+    # TODO end transaction 
     end = time.time()
 
     print len(dabblets), 'Dabblets saved to', db_name, 'in', end-start, 'seconds'
@@ -286,4 +317,3 @@ def test():
 if __name__ == '__main__':
     dabblets = save_a_bunch(50)
     import pdb;pdb.set_trace()
-

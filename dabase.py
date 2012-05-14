@@ -79,10 +79,10 @@ def test():
     from dabnabbit import Page
 
     init('dabase_unittest')
-    sp = Page(0, 'first_source', 0, 'first text', True, datetime.now())
+    sp = Page('first_source', 'first_source', 0, 0, 'first text', True, datetime.now())
     
     #da2 = Dabblet(title='first', context='first context', source_title='first source', source_pageid=0, source_revid=0, source_order=0, date_created=datetime.now())
-    da2 = Dabblet.from_page('first dab title', 'first dab context', sp, 0)
+    da2 = Dabblet.from_page('first dab title', 'first dab context', sp, 0, '')
     da2.save()
 
     dabblets = [ d for d in Dabblet.select() ]

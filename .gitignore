@@ -8,6 +8,8 @@ pub/
 *.json
 log*
 article_html/*.html
+*.db
+
 
 *.pyc*
 *.pyo*

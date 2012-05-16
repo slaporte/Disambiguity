@@ -17,4 +17,22 @@ def preapre_dabs():
     dabs = dabnabbit.get_random_dabblets(count=5)
     return {'dabs': [d._asdict() for d in dabs]}
 
+'''
+#outline of an edit function
+@route('/edit/')
+def fix_dabs():
+    #create fake dabblet to send via get, or just send the dabblet id from the db?
+
+    dabblet = {'source_page': {'pageid': pageid,
+                                'revisionid': revid},
+                'title': dab_title,
+                'source_order': order
+                }
+    guess   = dab_solution
+    title   = title
+
+    new_page = dabnabbit.replace_dabblet(dabblet, guess)
+
+    edit    = dabnabbig.submit_solution(title, new_page)
+'''
 run(host='localhost', port=8080)

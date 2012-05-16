@@ -19,8 +19,6 @@ class WikiException(Exception): pass
 
 Page = namedtuple("Page", "title, req_title, pageid, revisionid, revisiontext, is_parsed, fetch_date")
 
-DabOption = namedtuple("DabOption", "title, text, dab_title")
-
 def api_req(action, params=None, raise_exc=False, **kwargs):
     all_params = {'format': 'json',
                   'servedby': 'true'}
@@ -67,26 +65,44 @@ def api_req(action, params=None, raise_exc=False, **kwargs):
 
     return resp
 
+CategoryMember = namedtuple("CategoryMember", "pageid, ns, title")
+def get_category(cat_name, count=500, cont_str=""):
+    ret = []
+    while len(ret) < count and cont_str is not None:
+        cur_count = min(count - len(ret), 500)
+        params = {'list':       'categorymembers', 
+                  'cmtitle':    'Category:'+cat_name, 
+                  'prop':       'info', 
+                  'cmlimit':    cur_count,
+                  'cmcontinue': cont_str}
+        resp = api_req('query', params)
+        try:
+            qres = resp.results['query']
+        except:
+            print resp.error
+            break
+        ret.extend([ CategoryMember(pageid=cm['pageid'],
+                                    ns    =cm['ns'],
+                                    title =cm['title'])
+                    for cm in qres['categorymembers']])
+        try:
+            cont_str = resp.results['query-continue']['categorymembers']['cmcontinue']
+        except:
+            cont_str = None
 
-def get_category(cat_name, count=500):
-    params = {'list': 'categorymembers', 
-              'cmtitle': 'Category:'+cat_name, 
-              'prop': 'info', 
-              'cmlimit': count}
-    return api_req('query', params)
+    return ret
     
 def get_dab_page_ids(date=None, count=500):
     cat_res = get_category("Articles_with_links_needing_disambiguation_from_June_2011", count)
     # TODO: Continue query?
     # TODO: Get subcategory of Category:Articles_with_links_needing_disambiguation
-    return [ a['pageid'] for a in 
-             cat_res.results['query']['categorymembers'] ]
+    return [ a.pageid for a in cat_res ]
 
 
 def get_articles(page_ids=None, titles=None, parsed=True, follow_redirects=False, **kwargs):
     ret = []
-    params = {'prop':    'revisions',  
-              'rvprop':  'content|ids' }
+    params = {'prop':   'revisions',  
+              'rvprop': 'content|ids' }
 
     if page_ids:
         if not isinstance(page_ids, (str,unicode)):
@@ -153,7 +169,7 @@ def get_dab_choices(dabblets): # side effect-y..
         
         d = pq(dab_text)
         if not d('table#disambigbox'):
-            print dp.req_title, 'has no table#disambigbox, skipping.'
+            print 'Article "'+dp.req_title+'" has no table#disambigbox, skipping.'
             #print '(pulled in from', dabblet.source_title,')'
             continue
 
@@ -163,9 +179,12 @@ def get_dab_choices(dabblets): # side effect-y..
             # TODO: better heuristic than ":first" link?
             title = d(lia).find('a:first').attr('title') 
             text = lia.text_content().strip()
-            ret.append(DabChoice(dabblet=dabblet,
-                                 title=title, 
-                                 text=text))
+            if title and text:
+                ret.append(DabChoice(dabblet=dabblet,
+                                     title=title, 
+                                     text=text))
+            else:
+                print 'skippin a bogus link'
     
     return ret
 
@@ -187,7 +206,9 @@ def get_dabblets(parsed_page):
     d = pq(parsed_page.revisiontext)
     page_title = parsed_page.title
 
-    images_found = [img.attrib['src'] for img in d('.thumbimage')][:3]
+    images_found = [img.attrib['src'] 
+                    for img in d('img.thumbimage')
+                    if img.attrib.get('src')][:3]
 
     dab_link_markers = d('span:contains("disambiguation needed")')
     for i, dlm in enumerate(dab_link_markers):
@@ -243,11 +264,11 @@ def replace_dabblet(dabblet, guess):
 
 def submit_solution(title, solution):
     params = {'action': 'edit',
-            'format': 'json',
-            'title': title,
-            'text': solution,
-            'summary': EDIT_SUMMARY,
-            'token': '+\\'}
+              'format': 'json',
+              'title': title,
+              'text': solution,
+              'summary': EDIT_SUMMARY,
+              'token': '+\\'}
     resp = api_req('query', params)
     return resp
 
@@ -323,5 +344,5 @@ def test():
     title_articles = get_articles(titles=["Dog"], raise_exc=True)
 
 if __name__ == '__main__':
-    dabblets = save_a_bunch(50)
+    dabblets = save_a_bunch(600)
     import pdb;pdb.set_trace()

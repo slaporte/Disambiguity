@@ -8,7 +8,7 @@
 * get_category support paging/recursion
 
 * Track Dabblets that are invalid (incorrect in some fashion)
-** Link to a non-disambiguation page (Check for table#disambigbox to be sure that the dab page is actually a dab page before generating choices)
+** DONE: Link to a non-disambiguation page (Check for table#disambigbox to be sure that the dab page is actually a dab page before generating choices)
 
 * Skip DabChoice links that don't have title attributes
 * Rate viability

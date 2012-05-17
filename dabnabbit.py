@@ -1,4 +1,5 @@
 import gevent
+from gevent.pool import Pool
 from gevent import monkey
 monkey.patch_all()
 
@@ -68,10 +69,12 @@ def api_req(action, params=None, raise_exc=False, **kwargs):
 CategoryMember = namedtuple("CategoryMember", "pageid, ns, title")
 def get_category(cat_name, count=500, cont_str=""):
     ret = []
+    if not cat_name.startswith('Category:'):
+        cat_name = 'Category:'+cat_name
     while len(ret) < count and cont_str is not None:
         cur_count = min(count - len(ret), 500)
         params = {'list':       'categorymembers', 
-                  'cmtitle':    'Category:'+cat_name, 
+                  'cmtitle':    cat_name, 
                   'prop':       'info', 
                   'cmlimit':    cur_count,
                   'cmcontinue': cont_str}
@@ -84,16 +87,57 @@ def get_category(cat_name, count=500, cont_str=""):
         ret.extend([ CategoryMember(pageid=cm['pageid'],
                                     ns    =cm['ns'],
                                     title =cm['title'])
-                    for cm in qres['categorymembers']])
+                     for cm in qres['categorymembers']
+                     if cm.get('pageid') ])
         try:
             cont_str = resp.results['query-continue']['categorymembers']['cmcontinue']
         except:
             cont_str = None
 
     return ret
+
+CAT_CONC = 10
+ALL = 10**14
+def get_category_recursive(cat_name, count=None):
+    ret = set()
+    seen_cats = set()
+
+    if count is None:
+        count = ALL
+        print 'Recursively getting all members of', cat_name
+    else:
+        print 'Recursively getting',count,'members of', cat_name
+
+    jobs = []
+    api_pool = Pool(CAT_CONC)
+    jobs.append(api_pool.spawn(get_category, cat_name, count))
+    while len(ret) < count and jobs:
+        cur_count = count - len(ret)
+        api_pool.join(timeout=0.3, raise_error=True)
+        for j in jobs:
+            if not j.ready():
+                continue
+            jobs.remove(j)
+            if not j.successful():
+                print 'failed a cat fetch'
+                continue
+            cur_mems = j.value
+            for m in cur_mems:
+                if m.ns == 14:
+                    if m.title not in seen_cats:
+                        jobs.append(api_pool.spawn(get_category, m.title, cur_count))
+                        seen_cats.add(m.title)
+                else:
+                    ret.add(m)
+            print 'Got', len(cur_mems),'members, returns up to', len(ret)
+
+    ret = list(ret)[:count]
+    print 'Done, returning', len(ret),'items'
+    return list(ret)
     
 def get_dab_page_ids(date=None, count=500):
-    cat_res = get_category("Articles_with_links_needing_disambiguation_from_June_2011", count)
+    #cat_res = get_category_recursive("Articles_with_links_needing_disambiguation_from_June_2011", count)
+    cat_res = get_category_recursive("Articles_with_links_needing_disambiguation", count)
     # TODO: Continue query?
     # TODO: Get subcategory of Category:Articles_with_links_needing_disambiguation
     return [ a.pageid for a in cat_res ]
@@ -138,6 +182,8 @@ def get_articles(page_ids=None, titles=None, parsed=True, follow_redirects=False
         redirects = dict([ (r['to'],r['from']) for r in redirect_list ])
         # this isn't perfect since multiple pages might redirect to the same page
         for page in pages:
+            if not page.get('pageid') or not page.get('title'):
+                continue
             title = page['title']
             pa = Page( title  = title,
                        req_title  = redirects.get(title, title),
@@ -308,6 +354,7 @@ def save_a_bunch(count=1000):
     start = time.time()
 
     page_ids = get_dab_page_ids(count=count)
+
     pages    = green_call_list(get_articles, page_ids)
     dabblets = sum([ get_dabblets(p) for p in pages ], [])
 

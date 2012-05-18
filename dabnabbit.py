@@ -391,5 +391,5 @@ def test():
     title_articles = get_articles(titles=["Dog"], raise_exc=True)
 
 if __name__ == '__main__':
-    dabblets = get_random_dabblets(5)
+    dabblets = save_a_bunch(1000)
     import pdb;pdb.set_trace()

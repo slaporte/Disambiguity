@@ -12,7 +12,9 @@ from pyquery import PyQuery as pq
 from collections import namedtuple
 
 import dabase
-from dabase import Dabblet, DabChoice
+from dabase import Dabblet, DabChoice, DabImage
+
+from progress import ProgressMeter
 
 API_URL = "http://en.wikipedia.org/w/api.php"
 EDIT_SUMMARY = 'DAB link solved with disambiguity!'
@@ -86,7 +88,7 @@ def get_category(cat_name, count=500, cont_str=""):
         try:
             qres = resp.results['query']
         except:
-            print resp.error
+            # print resp.error # log
             break
         ret.extend([ CategoryMember(pageid=cm['pageid'],
                                     ns    =cm['ns'],
@@ -101,7 +103,7 @@ def get_category(cat_name, count=500, cont_str=""):
     return ret
 
 CAT_CONC = 10
-ALL = 10**14
+ALL = 20000
 def get_category_recursive(cat_name, count=None):
     ret = set()
     seen_cats = set()
@@ -115,6 +117,7 @@ def get_category_recursive(cat_name, count=None):
     jobs = []
     api_pool = Pool(CAT_CONC)
     jobs.append(api_pool.spawn(get_category, cat_name, count))
+    dpm = ProgressMeter(total=count, unit="categories", ticks=30)
     while len(ret) < count and jobs:
         cur_count = count - len(ret)
         api_pool.join(timeout=0.3, raise_error=True)
@@ -133,10 +136,12 @@ def get_category_recursive(cat_name, count=None):
                         seen_cats.add(m.title)
                 else:
                     ret.add(m)
-            print 'Got', len(cur_mems),'members, returns up to', len(ret)
+                    dpm.update(1)
 
+    dpm.update(count - len(ret))
+    
     ret = list(ret)[:count]
-    print 'Done, returning', len(ret),'items'
+    print 'Done, returning', len(ret),'category members.'
     return list(ret)
 
 def get_dab_page_ids(date=None, count=500):
@@ -216,7 +221,7 @@ def get_dab_choices(dabblets): # side effect-y..
         
         d = pq(dab_text)
         if not d('table#disambigbox'):
-            print 'Article "'+dp.req_title+'" has no table#disambigbox, skipping.'
+            #print 'Article "'+dp.req_title+'" has no table#disambigbox, skipping.'
             #print '(pulled in from', dabblet.source_title,')'
             continue
 
@@ -230,8 +235,8 @@ def get_dab_choices(dabblets): # side effect-y..
                 ret.append(DabChoice(dabblet=dabblet,
                                      title=title, 
                                      text=text))
-            else:
-                print 'skippin a bogus link'
+            #else:
+            #    print 'skippin a bogus link'
     
     return ret
 
@@ -268,12 +273,12 @@ def get_dabblets(parsed_page):
         if dab_link.is_('a'):
             dab_title = dab_link.attr('title')
             context = get_context(dab_link)
-
-            ret.append( Dabblet.from_page(dab_title, 
-                                          context.outerHtml(), 
-                                          parsed_page, 
-                                          i,
-                                          '||'.join(images_found)))
+            ctx_html = context.outerHtml()
+            ret.append( Dabblet.from_page(title        = dab_title, 
+                                          context      = ctx_html, 
+                                          source_page  = parsed_page, 
+                                          source_order = i,
+                                          source_imgs  = images_found))
             
     return ret
 
@@ -329,42 +334,62 @@ def chunked_pimap(func, els, concurrency=150, chunk_size=P_PER_CALL):
     return pool.imap_unordered(func, chunked)
 
 @dabase.dab_db.commit_on_success
-def save_a_bunch(count=1000, concurrency=150, per_call=P_PER_CALL):
+def save_a_bunch(count=1000, concurrency=100, per_call=P_PER_CALL):
     import time
 
     db_name = 'abunch'
     dabase.init(db_name)
 
-    start = time.time()
-
     page_ids = get_dab_page_ids(count=count)
 
     dabblets = []
+    dpm = ProgressMeter(total=len(page_ids), unit="articles", ticks=30)
     for pages in chunked_pimap(get_articles, page_ids,
                                concurrency=concurrency,
                                chunk_size=per_call):
         for p in pages:
-            dabblets.extend(get_dabblets(p))
-
+            dpm.update(1)
+            cur_dabs = get_dabblets(p)
+            dabblets.extend(cur_dabs)
+    
+    print
+    print 'Saving', len(dabblets), 'dabblets.'
+    dspm = ProgressMeter(total=len(dabblets), unit="dabblets", ticks=30)
+    dsave_start = time.time()
     for d in dabblets:
         d.save()
+        for img in d.source_imgs:
+            dab_img = DabImage(dabblet=d, src=img)
+            dab_img.save()
+        dspm.update(1)
+    print
+    print 'Done saving', len(dabblets), 'Dabblets. (', time.time()-dsave_start,'seconds)'
 
+    print 'Processing choices for', len(dabblets), 'Dabblets.'
+    cpm = ProgressMeter(total=len(page_ids), unit="Dabblets", ticks=30)
     all_choices = []
-    for choice in chunked_pimap(get_dab_choices, dabblets,
-                                concurrency=concurrency,
-                                chunk_size=per_call):
-        all_choices.extend(choice)
-
+    for choices in chunked_pimap(get_dab_choices, dabblets,
+                                 concurrency=concurrency,
+                                 chunk_size=per_call):
+        cpm.update(per_call)
+        all_choices.extend(choices)
+    
+    print
+    print 'Saving', len(all_choices), 'DabChoices.'
+    cspm = ProgressMeter(total=len(all_choices), unit="DabChoices", ticks=30)
+    csave_start = time.time()
     for c in all_choices:
         c.save()
-    # TODO end transaction 
-    end = time.time()
+        cspm.update(1)
+    print 'Done saving', len(dabblets), 'DabChoices. (', time.time()-csave_start,'seconds)'
 
+    drank_start = time.time()
+    print 'Ranking', len(dabblets), 'Dabblets.'
     for d in dabblets:
-        d.difficulty = d.rank()
+        d.priority = d.get_priority()
         d.save()
-        
-    print len(dabblets), 'Dabblets saved to', db_name, 'in', end-start, 'seconds'
+    print 'Done ranking', len(dabblets), 'DabChoices. (', time.time()-drank_start,'seconds)'
+
     print len(set([d.title for d in dabblets])), 'unique titles'
     print len(set([d.source_title for d in dabblets])), 'unique source pages'
     print len(all_choices), 'dabblet choices fetched and saved.'
@@ -372,6 +397,7 @@ def save_a_bunch(count=1000, concurrency=150, per_call=P_PER_CALL):
     print Dabblet.select().count(), 'total records in database'
     print len(set([d.title for d in Dabblet.select()])), 'unique titles in database'
 
+    print 'Committing...'
     return dabblets
 
 def test():
@@ -386,5 +412,11 @@ def test():
     title_articles = get_articles(titles=["Dog"], raise_exc=True)
 
 if __name__ == '__main__':
-    dabblets = save_a_bunch(20)
+    import time
+    dcount = 200
+    start = time.time()
+    print 'Saving a bunch (',dcount,') of Dabblets.'
+    dabblets = save_a_bunch(dcount)
+    end = time.time()
+    print len(dabblets), 'Dabblets saved in', end-start, 'seconds'
     import pdb;pdb.set_trace()

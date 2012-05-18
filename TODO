@@ -1,16 +1,16 @@
 
 == Tasks
+* argparse-ify dabnabbit
 * Improve heuristic for finding relevant link within DabChoice
 * Find/replace Dab answer within unparsed wiki text
 * Implement upper-bounding for size of dab link context
 * Handle redirect articles with dab links (skip em)
-* get_dab_page_ids support date call
-* get_category support paging/recursion
+* DONE: get_category support paging/recursion
 
 * Track Dabblets that are invalid (incorrect in some fashion)
 ** DONE: Link to a non-disambiguation page (Check for table#disambigbox to be sure that the dab page is actually a dab page before generating choices)
 
-* Skip DabChoice links that don't have title attributes
+* DONE: Skip DabChoice links that don't have title attributes
 * Rate viability
 * Rate difficulty
 

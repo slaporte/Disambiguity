@@ -16,6 +16,9 @@ class DabModel(pw.Model):
 
 
 class Dabblet(DabModel):
+    CONTEXT_THRESHOLD = 100
+    CHOICES_THRESHOLD = 10
+    
     title   = pw.CharField()
     context = pw.TextField()
 
@@ -46,6 +49,13 @@ class Dabblet(DabModel):
         ret.source_page = source_page
         return ret
 
+    def rank(self):
+        if len(self.context) > self.CONTEXT_THRESHOLD:
+            if self.choices.count() > self.CHOICES_THRESHOLD:
+                return 1
+            return 2
+        return 3
+    
     def _asdict(self):
         return {'title': self.title,
                 'source_title': self.source_title,

@@ -1,8 +1,11 @@
-
 == Tasks
 * argparse-ify dabnabbit
 * retry() for fetching
 * add .done() to progress bar
+* Automatic scaling of progress bar to terminal window (+in refresh)
+* Progress bar/spinner for calls with indeterminate return lengths
+* Enforce uniqueness of dabblet (composite key: source title + dab title + source order?)
+
 * Improve heuristic for finding relevant link within DabChoice
 * Find/replace Dab answer within unparsed wiki text
 * Implement upper-bounding for size of dab link context
@@ -43,3 +46,10 @@
 * Can't override __init__, even with decorators and inheritance
 * Can only pass keyword arguments?
 * Field default values
+
+== Gevent thoughts
+* Source reloader for bottle? (Gevent doesn't like being in threads)
+* Scheduling
+* Pools with shared semaphores
+* Retry
+* Automatic scaling of pools (based on retry)

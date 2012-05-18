@@ -1,6 +1,8 @@
 
 == Tasks
 * argparse-ify dabnabbit
+* retry() for fetching
+* add .done() to progress bar
 * Improve heuristic for finding relevant link within DabChoice
 * Find/replace Dab answer within unparsed wiki text
 * Implement upper-bounding for size of dab link context

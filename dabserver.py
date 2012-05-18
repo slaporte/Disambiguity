@@ -14,7 +14,7 @@ def fake_dabs():
 
 @route('/prepare/')
 def preapre_dabs():
-    dabs = dabnabbit.get_random_dabblets(count=5)
+    dabs = dabnabbit.get_random_dabblets(count=10)
     return {'dabs': [d._asdict() for d in dabs]}
 
 '''

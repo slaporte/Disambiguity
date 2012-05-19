@@ -8,7 +8,8 @@ def init(db_name, **kwargs):
     dab_db.connect()
     Dabblet.create_table(fail_silently=True)
     DabChoice.create_table(fail_silently=True)
-
+    DabImage.create_table(fail_silently=True)
+    DabSolution.create_table(fail_silently=True)
 
 class DabModel(pw.Model):
     class Meta:
@@ -16,6 +17,9 @@ class DabModel(pw.Model):
 
 
 class Dabblet(DabModel):
+    CONTEXT_THRESHOLD = 250
+    CHOICES_THRESHOLD = 12
+    
     title   = pw.CharField()
     context = pw.TextField()
 
@@ -23,16 +27,15 @@ class Dabblet(DabModel):
     source_order  = pw.IntegerField()
     source_pageid = pw.IntegerField()
     source_revid  = pw.IntegerField()
-    source_images = pw.TextField() # refactor to another table
 
     date_created  = pw.DateTimeField(db_index=True)
 
     difficulty    = pw.IntegerField()
-    viability     = pw.IntegerField()
+    priority      = pw.IntegerField()
     
     @classmethod
     def from_page(cls, title, context, source_page, source_order, 
-                  source_images, **kw):
+                  source_imgs, **kw):
         # TODO: get options
         ret = cls(title = title,
                   context = context,
@@ -40,19 +43,31 @@ class Dabblet(DabModel):
                   source_pageid = source_page.pageid,
                   source_revid = source_page.revisionid,
                   source_order = source_order,
-                  source_images = source_images,
                   date_created = datetime.now())
                   
         ret.source_page = source_page
+        ret.source_imgs = source_imgs
         return ret
 
-    def _asdict(self):
-        return {'title': self.title,
-                'source_title': self.source_title,
-                'context': self.context,
-                'images': self.source_images,
-                'options': [ o._asdict() for o in self.options ]
-                }
+    def get_priority(self):
+        if len(self.context.split()) > self.CONTEXT_THRESHOLD:
+            if self.choices.count() > self.CHOICES_THRESHOLD:
+                return 3
+            return 2
+        return 1
+    
+    def jsondict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'source_title': self.source_title,
+            'source_order': self.source_order,
+            'context': self.context,
+            'images':  [ i.src for i in self.images],
+            'choices': [ c.jsondict() for c in self.choices ],
+            'priority': self.priority,
+            'difficulty': self.difficulty
+            }
 
 
 class DabChoice(DabModel):
@@ -60,13 +75,19 @@ class DabChoice(DabModel):
     title   = pw.CharField()
     text    = pw.TextField()
 
-    def _asdict(self):
-        return { 'title':     self.title,
+    def jsondict(self):
+        return { 'dabblet_id': self.dabblet.id,
+                 'title':     self.title,
                  'text':      self.text,
                  'dab_title': self.dabblet.title }
+    
+
+class DabImage(DabModel):
+    dabblet = pw.ForeignKeyField(Dabblet, related_name='images')
+    src     = pw.TextField()
 
 
-class DabbletSolution(DabModel):
+class DabSolution(DabModel):
     dabblet = pw.ForeignKeyField(Dabblet, related_name='dabblet')
     choice  = pw.ForeignKeyField(DabChoice, related_name='choice')
     

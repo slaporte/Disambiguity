@@ -1,16 +1,21 @@
-
 == Tasks
+* argparse-ify dabnabbit
+* retry() for fetching
+* add .done() to progress bar
+* Automatic scaling of progress bar to terminal window (+in refresh)
+* Progress bar/spinner for calls with indeterminate return lengths
+* Enforce uniqueness of dabblet (composite key: source title + dab title + source order?)
+
 * Improve heuristic for finding relevant link within DabChoice
 * Find/replace Dab answer within unparsed wiki text
 * Implement upper-bounding for size of dab link context
 * Handle redirect articles with dab links (skip em)
-* get_dab_page_ids support date call
-* get_category support paging/recursion
+* DONE: get_category support paging/recursion
 
 * Track Dabblets that are invalid (incorrect in some fashion)
 ** DONE: Link to a non-disambiguation page (Check for table#disambigbox to be sure that the dab page is actually a dab page before generating choices)
 
-* Skip DabChoice links that don't have title attributes
+* DONE: Skip DabChoice links that don't have title attributes
 * Rate viability
 * Rate difficulty
 
@@ -41,3 +46,10 @@
 * Can't override __init__, even with decorators and inheritance
 * Can only pass keyword arguments?
 * Field default values
+
+== Gevent thoughts
+* Source reloader for bottle? (Gevent doesn't like being in threads)
+* Scheduling
+* Pools with shared semaphores
+* Retry
+* Automatic scaling of pools (based on retry)

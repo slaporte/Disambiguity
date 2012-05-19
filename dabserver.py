@@ -29,7 +29,7 @@ def get_dabblet():
     else:
         ret = Dabblet.select().order_by('priority').limit('1').get()
     
-    return ret.jsondict()
+    return ret.jsondict
 
 @route('/next/')
 def next_dabblet():
@@ -43,7 +43,7 @@ def next_dabblet():
 
     return { 'cur_index': cur_index,
              'total': len(session['seq']),
-             'dabblet': Dabblet.get(id=cur_id).jsondict()
+             'dabblet': Dabblet.get(id=cur_id).jsondict
              }
 
 def get_session(session_id=None):
@@ -82,13 +82,17 @@ def solve_dabblet():
                       date_solved=datetime.now())
     sol.save()
     # replace?
-    return { 'hello stephen': "it's 2:37AM and your request succeeded" }
+
+    view_count = DabSolution.select().count()
+    pass_count = DabSolution.select().where(choice_id=None).count()
+    return { "view_count": view_count,
+             "solution_count": view_count-pass_count }
     
 @route('/random/')
 def get_random_dabblet():
     rdabs = Dabblet.select().order_by("RANDOM()").limit(2)
     
-    return { 'dabs': [ d.jsondict() for d in rdabs ] }
+    return { 'dabs': [ d.jsondict for d in rdabs ] }
 
 class SlashMiddleware(object):
     def __init__(self, app):

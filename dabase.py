@@ -50,12 +50,23 @@ class Dabblet(DabModel):
         return ret
 
     def get_priority(self):
-        if len(self.context.split()) > self.CONTEXT_THRESHOLD:
-            if self.choices.count() > self.CHOICES_THRESHOLD:
-                return 3
-            return 2
-        return 1
+        priority = 5
+        choice_count = self.choices.count()
+        
+        if choice_count > 0:
+            priority -= 1
+            if choice_count < self.CHOICES_THRESHOLD:
+                priority -= 1
+            
+            if len(self.context.split()) < self.CONTEXT_THRESHOLD:
+                priority -= 1
+                
+            if self.images.count() > 0:
+                priority -= 1
+            
+        return priority
     
+    @property
     def jsondict(self):
         return {
             'id': self.id,
@@ -64,7 +75,7 @@ class Dabblet(DabModel):
             'source_order': self.source_order,
             'context': self.context,
             'images':  [ i.src for i in self.images],
-            'choices': [ c.jsondict() for c in self.choices ],
+            'choices': [ c.jsondict for c in self.choices ],
             'priority': self.priority,
             'difficulty': self.difficulty
             }
@@ -74,7 +85,8 @@ class DabChoice(DabModel):
     dabblet = pw.ForeignKeyField(Dabblet, related_name='choices')
     title   = pw.CharField()
     text    = pw.TextField()
-
+    
+    @property
     def jsondict(self):
         return { 'dabblet_id': self.dabblet.id,
                  'choice_id': self.id,
@@ -95,6 +107,14 @@ class DabSolution(DabModel):
     solver_ip    = pw.CharField()
     solver_index = pw.IntegerField()
     date_solved  = pw.DateTimeField(db_index=True)
+
+    @property
+    def jsondict(self):
+        return { 'dabblet_id':  self.dabblet.id,
+                 'choice_id':   self.choice and self.choice.id,
+                 'solver_ip':   self.title,
+                 'solver_index':self.solver_index,
+                 'date':        str(self.date_solved) }
 
 
 def test():

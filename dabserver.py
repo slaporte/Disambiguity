@@ -1,8 +1,8 @@
-import bottle
-from bottle import route, run, request, response
-import bottle_jsonp
+import os
 
-from peewee import R
+import bottle
+from bottle import route, run, request, response, static_file
+#import bottle_jsonp
 
 from dabnabbit import api_req, replace_dabblet
 import dabase
@@ -11,6 +11,13 @@ from dabase import Dabblet, DabChoice, DabImage, DabSolution
 bottle.debug(True)
 
 # TODO: sequencing/session/"next"
+
+STATIC_DIR = os.path.join(os.path.dirname(__file__), 'static')
+
+@route('/')
+@route('/<path:path>')
+def home_path(path="index.html"):
+    return static_file(path, root=STATIC_DIR)
 
 @route('/get/')
 def get_dabblet():
@@ -28,7 +35,14 @@ def get_random_dabblet():
     
     return { 'dabs': [ d.jsondict() for d in rdabs ] }
 
+class SlashMiddleware(object):
+    def __init__(self, app):
+        self.app = app
+    def __call__(self, e, h):
+        e['PATH_INFO'] = e['PATH_INFO'].rstrip('/')+'/'
+        return self.app(e,h)
+
 if __name__ == '__main__':
     dabase.init('abunch')
-    print get_random_dabblet()
-    run(host='0.0.0.0', port=8080, server='gevent')
+    app = SlashMiddleware(bottle.app())
+    run(app=app, host='0.0.0.0', port=8080, server='gevent')

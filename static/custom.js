@@ -28,6 +28,15 @@ $(document).ready(function() {
 	    $.ajax(all_kwargs);
 	}
 
+	function post_solution(dab_id, solution_id, complete_callback) {
+		params = {
+		  type: 'POST',
+		  data: {'dabblet_id': dab_id, 'choice_id': solution_id },
+		};
+
+		do_query('http://localhost:8080/solve/', complete_callback, params);
+	}
+
 	function new_random() {
 
 		do_query('http://localhost:8080/next/', page_setup);
@@ -44,9 +53,14 @@ $(document).ready(function() {
 			$('#context').html(dab_context);
 			$('span:contains("disambiguation")"').parents('sup').hide();
 			$('#option_list').empty();
+			$('#skip').data('dab_id', dab.id);
 			console.log(choices)
 			for(var i = 0; i < choices.length; i++) {
-				$('#option_list').append('<li><div class="option med_bg"><span class="opt_title accent_text">' +  choices[i].title + '</span> - <span class="opt_desc">' + choices[i].text + '</span></div><div class="preview" link="http://en.m.wikipedia.org/wiki/' + choices[i].title.replace(' ', '_') + '"></div></li>');
+				var new_el = $('<li><div class="option med_bg"><span class="opt_title accent_text">' +  choices[i].title + '</span> - <span class="opt_desc">' + choices[i].text + '</span></div><div class="preview" link="http://en.m.wikipedia.org/wiki/' + choices[i].title.replace(' ', '_') + '"></div></li>');
+				new_el.data('choice_id', choices[i].choice_id);
+				new_el.data('dab_id', choices[i].dabblet_id);
+				$('#option_list').append(new_el);
+
 			}
 			$('.filmstrip_img').empty();
 			for(var i = 0; i < images.length; i++) {
@@ -156,6 +170,7 @@ $(document).ready(function() {
 				swipe(i);
 				i++; //i rotates through the colors
 				if (i == colors_array.length) {i=0;}
+				post_solution($(this).parent().data('dab_id'), $(this).parent().data('choice_id'), function(){ console.log('success')})
 			},
 			mouseover: function() {
 				$(this).css('backgroundColor', accent)
@@ -226,6 +241,7 @@ $(document).ready(function() {
 	$('#skip').click(function(){
 			console.log('skip')
 			swipe(i);	
+			post_solution($(this).data('dab_id'),'-1', function(){ console.log('success')})
 	});
 // INITIALIZING THE PAGE ///////////////////////
 	resetContent();

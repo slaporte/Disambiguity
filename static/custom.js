@@ -39,7 +39,7 @@ $(document).ready(function() {
 
 	function new_random() {
 
-		do_query('http://localhost:8080/next/', page_setup);
+		do_query('/next/', page_setup);
 
 		function page_setup(err, data){
 			var dab 		= data.dabblet;

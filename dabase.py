@@ -3,7 +3,7 @@ from datetime import datetime
 
 dab_db = pw.SqliteDatabase(None) #deferred initialization
 
-def init(db_name, **kwargs):
+def init(db_name='dabase', **kwargs):
     dab_db.init(str(db_name)+'.db', **kwargs)
     dab_db.connect()
     Dabblet.create_table(fail_silently=True)
@@ -77,6 +77,7 @@ class DabChoice(DabModel):
 
     def jsondict(self):
         return { 'dabblet_id': self.dabblet.id,
+                 'choice_id': self.id,
                  'title':     self.title,
                  'text':      self.text,
                  'dab_title': self.dabblet.title }

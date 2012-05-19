@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 
 import bottle
 from bottle import route, run, request, response, static_file
@@ -59,18 +60,30 @@ def get_session(session_id=None):
     SESSIONS[session_id] = session
     return session
 
-@route('/solve/')
+@route('/solve/', method='POST')
 def solve_dabblet():
+    session_id = request.get_cookie('session_id') #TODO: decorator-ify session
+    session = get_session(session_id)
+    response.set_cookie('session_id', session['id'])
+
     dabblet_id = int(request.POST['dabblet_id'])
     choice_id  = int(request.POST['choice_id'])
 
     dabblet = Dabblet.get(id=dabblet_id)
-    choice  = DabChoice.get(id=choice_id)
-    
-    
-    
-    
+    if choice_id < 0:
+        choice = None
+    else:
+        choice  = DabChoice.get(id=choice_id)
 
+    sol = DabSolution(dabblet=dabblet,
+                      choice=choice,
+                      solver_ip=request.get('REMOTE_ADDR'),
+                      solver_index=session.get('cur_index', 0),
+                      date_solved=datetime.now())
+    sol.save()
+    # replace?
+    return { 'hello stephen': "it's 2:37AM and your request succeeded" }
+    
 @route('/random/')
 def get_random_dabblet():
     rdabs = Dabblet.select().order_by("RANDOM()").limit(2)

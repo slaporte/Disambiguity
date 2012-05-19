@@ -90,10 +90,11 @@ class DabImage(DabModel):
 
 class DabSolution(DabModel):
     dabblet = pw.ForeignKeyField(Dabblet, related_name='dabblet')
-    choice  = pw.ForeignKeyField(DabChoice, related_name='choice')
+    choice  = pw.ForeignKeyField(DabChoice, null=True, related_name='choice')
     
-    solver_ip   = pw.CharField()
-    date_solved = pw.DateTimeField(db_index=True)
+    solver_ip    = pw.CharField()
+    solver_index = pw.IntegerField()
+    date_solved  = pw.DateTimeField(db_index=True)
 
 
 def test():

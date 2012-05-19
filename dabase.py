@@ -3,7 +3,7 @@ from datetime import datetime
 
 dab_db = pw.SqliteDatabase(None) #deferred initialization
 
-def init(db_name='dabase', **kwargs):
+def init(db_name='dab_store', **kwargs):
     dab_db.init(str(db_name)+'.db', **kwargs)
     dab_db.connect()
     Dabblet.create_table(fail_silently=True)

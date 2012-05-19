@@ -55,7 +55,7 @@ def get_session(session_id=None):
     if not session.get('seq'):
         sequence = ALL_DABBLETS[:]
         random.shuffle(sequence)
-        sequence.sort(key=lambda d: round(d[1], 1)) # difficulty
+        sequence.sort(key=lambda d: round(d[1])) # difficulty
         session['seq'] = [ d[0] for d in sequence ]
     SESSIONS[session_id] = session
     return session

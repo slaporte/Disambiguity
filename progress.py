@@ -37,8 +37,8 @@ class ProgressMeter(object):
         self.rate_refresh = float(kw.get('rate_refresh', .5))
         # Number of ticks in meter
         self.meter_ticks = int(kw.get('ticks', 60))
-        self.meter_division = float(self.total) / self.meter_ticks
-        self.meter_value = int(self.count / self.meter_division)
+        self.meter_division = (float(self.total) / self.meter_ticks) or 1.0
+        self.meter_value = int(self.count / self.meter_division) or 1
         self.last_update = None
         self.rate_history_idx = 0
         self.rate_history_len = 10
@@ -76,7 +76,7 @@ class ProgressMeter(object):
                     continue
                 cnt += 1
                 total += rate
-            rate = total / cnt
+            rate = (total / cnt) or 1
             self.estimated_duration.append((self.total - self.count) / rate)
         self.rate_current = rate
         self.last_update = now

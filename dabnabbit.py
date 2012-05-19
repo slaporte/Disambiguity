@@ -8,6 +8,7 @@ import requests
 import json
 import time
 import random
+from optparse import OptionParser
 from pyquery import PyQuery as pq
 from collections import namedtuple
 
@@ -17,7 +18,19 @@ from dabase import Dabblet, DabChoice, DabImage
 from progress import ProgressMeter
 
 API_URL = "http://en.wikipedia.org/w/api.php"
+DEFAULT_CAT = "Articles_with_links_needing_disambiguation"
+DEFAULT_LIMIT = 100
+DEFAULT_CONC  = 100
+DEFAULT_PER_CALL = 4
+DEFAULT_TIMEOUT = 30
+DEFAULT_DB = 'dab_store'
+CAT_CONC = 10
+ALL = 20000
+
+
 EDIT_SUMMARY = 'DAB link solved with disambiguity!'
+
+
 
 class WikiException(Exception): pass
 
@@ -102,8 +115,6 @@ def get_category(cat_name, count=500, cont_str=""):
 
     return ret
 
-CAT_CONC = 10
-ALL = 20000
 def get_category_recursive(cat_name, count=None):
     ret = set()
     seen_cats = set()
@@ -144,8 +155,8 @@ def get_category_recursive(cat_name, count=None):
     print 'Done, returning', len(ret),'category members.'
     return list(ret)
 
-def get_dab_page_ids(date=None, count=500):
-    cat_res = get_category_recursive("Articles_with_links_needing_disambiguation", count)
+def get_dab_page_ids(category=DEFAULT_CAT, count=500):
+    cat_res = get_category_recursive(category, count)
     return [ a.pageid for a in cat_res ]
 
 
@@ -246,7 +257,8 @@ def get_context(dab_a):
     d(dab_a).addClass('dab-link')
     link_parents = dab_a.parents()
     cand_contexts = [ p for p in link_parents 
-                      if p.text_content() and len(p.text_content().split()) > 30 ]
+                      if getattr(p, "text_content", lambda: False)()
+                      and len(p.text_content().split()) > 30 ]
     chosen_context = cand_contexts[-1]
     d(chosen_context).addClass('dab-context')
     # add upperbound/wrapping div
@@ -267,18 +279,18 @@ def get_dabblets(parsed_page):
         try:
             dab_link = d(dlm).parents("sup")[0].getprevious() # TODO: remove extra d?
             dab_link = d(dab_link)
+            if dab_link.is_('a'):
+                dab_title = dab_link.attr('title')
+                context = get_context(dab_link)
+                ctx_html = context.outerHtml()
+                ret.append( Dabblet.from_page(title        = dab_title, 
+                                              context      = ctx_html, 
+                                              source_page  = parsed_page, 
+                                              source_order = i,
+                                              source_imgs  = images_found))
         except Exception as e:
             print 'nope', e
-            continue
-        if dab_link.is_('a'):
-            dab_title = dab_link.attr('title')
-            context = get_context(dab_link)
-            ctx_html = context.outerHtml()
-            ret.append( Dabblet.from_page(title        = dab_title, 
-                                          context      = ctx_html, 
-                                          source_page  = parsed_page, 
-                                          source_order = i,
-                                          source_imgs  = images_found))
+            pass
             
     return ret
 
@@ -324,23 +336,18 @@ def submit_solution(title, solution):
     resp = api_req('query', params)
     return resp
 
-P_PER_CALL = 4
-DEFAULT_TIMEOUT = 30
-
-def chunked_pimap(func, els, concurrency=150, chunk_size=P_PER_CALL):
+def chunked_pimap(func, els, concurrency=DEFAULT_CONC, chunk_size=DEFAULT_PER_CALL):
     chunked = (els[i:i + chunk_size]
                for i in xrange(0, len(els), chunk_size))
     pool = Pool(concurrency)
     return pool.imap_unordered(func, chunked)
 
 @dabase.dab_db.commit_on_success
-def save_a_bunch(count=1000, concurrency=100, per_call=P_PER_CALL):
+def save_a_bunch(count=DEFAULT_LIMIT, category=DEFAULT_CAT, concurrency=DEFAULT_CONC, 
+                 per_call=DEFAULT_PER_CALL, db_name=DEFAULT_DB):
     import time
 
-    db_name = 'abunch'
-    dabase.init(db_name)
-
-    page_ids = get_dab_page_ids(count=count)
+    page_ids = get_dab_page_ids(category, count)
 
     dabblets = []
     dpm = ProgressMeter(total=len(page_ids), unit="articles", ticks=30)
@@ -411,12 +418,68 @@ def test():
     title_article = get_articles(titles="Dog", raise_exc=True)
     title_articles = get_articles(titles=["Dog"], raise_exc=True)
 
+def parse_args():
+    parser = OptionParser()
+    parser.add_option("-d", "--database", dest="database", 
+                      type="string", default=DEFAULT_DB,
+                      help="name of sqlite database used for saving Dabblets")
+
+    parser.add_option("-a", "--all", dest="get_all", 
+                      action="store_true", default=False,
+                      help="save as many Dabblets as we can find")
+
+    parser.add_option("-l", "--limit", dest="limit", 
+                      type="int", default=DEFAULT_LIMIT,
+                      help="max number of articles to search for Dabblets (see -a)")
+
+    parser.add_option("-C", "--category", dest="category", 
+                      type="string", default=DEFAULT_CAT,
+                      help="category to search for Dabblets (recursive)")
+
+    parser.add_option("-c", "--concurrency", dest="concurrency", 
+                      type="int", default=DEFAULT_CONC,
+                      help="concurrency factor to use when querying the" 
+                      "Wikipedia API (simultaneous requests)")
+
+    parser.add_option("-g", "--grouping", dest="grouping", 
+                      type="int", default=DEFAULT_PER_CALL,
+                      help="how many sub-responses to request per API call")
+
+    parser.add_option('-D', "--debug", dest="debug",
+                      action="store_true", default=False,
+                      help="enable debugging (and pop up pdb at the end of successful run")
+
+    parser.add_option("-q", "--quiet", dest="verbose", action="store_false",
+                      help="suppress output (TODO)")
+    return parser.parse_args()
+
+
 if __name__ == '__main__':
     import time
-    dcount = 100
+    opts, args = parse_args()
     start = time.time()
-    print 'Saving a bunch (',dcount,') of Dabblets.'
-    dabblets = save_a_bunch(dcount)
+    if opts.get_all:
+        print 'Getting all Dabblets.',
+        opts.limit = None
+    else:
+        print 'Searching up to',opts.limit,'articles for Dabblets.'
+    print 'Using', opts.concurrency, 'green threads. Saving to', opts.database
+
+    dabase.init(opts.database)
+
+    try:
+        dabblets = save_a_bunch(count=opts.limit,
+                                category=opts.category,
+                                concurrency=opts.concurrency,
+                                per_call=opts.grouping,
+                                db_name=opts.database)
+    except Exception as e:
+        #if opts.debug: #TODO
+        #    import pdb;pdb.pm()
+        raise
+
     end = time.time()
     print len(dabblets), 'Dabblets saved in', end-start, 'seconds'
-    import pdb;pdb.set_trace()
+
+    if opts.debug:
+        import pdb;pdb.set_trace()

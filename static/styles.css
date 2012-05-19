@@ -1,0 +1,432 @@
+body {
+	margin:0;
+	padding:0;
+	font-family: sans-serif;
+	line-height:19px;
+	font-size:13px;
+	overflow-x:hidden;
+	color:#808285;
+}
+
+/* COLORS */
+.light_bg {background-color: #ebf2f6;}
+.light_text {color: #ebf2f6 !important;}
+.med_bg {background-color: #DAF0FC;}
+.med_text { color:#DAF0FC;}
+.accent_bg {background-color:#25b8eb; color:white;}
+.accent_text {color:#25b8eb;}
+.accent_border {border-color:#25b8eb;}
+
+
+/* TYPE */
+header, h1, h2, h3, h4, h5 {
+	font-family: 'Oswald', 'Helvetica', 'Arial', sans-serif;
+	margin:0px;
+	padding:0px;
+}
+
+h1 {
+	display:inline-block;
+	float:left;
+	font-size:18px;
+	line-height:30px;
+	/*color:#25b8eb;*/
+	/*margin-top:20px;*/
+}
+
+
+h2 {
+	font-size:40px;
+	line-height:48px;
+	font-weight:400;
+	text-transform:uppercase;
+
+}
+
+h3 {
+	font-size:18px;
+	line-height:28px;
+	font-weight:300;
+	text-transform:uppercase;
+	letter-spacing:1px;
+}
+
+h4 {
+	font-size:18px;
+	line-height:21px;
+	font-weight:400;
+	/*color:#25b8eb;*/
+	margin-top:20px;
+}
+
+p {
+	font-size:14px;
+	line-height:26px;
+	margin:0px 0px 10px 0px;
+}
+
+a {
+	/*color:#808285;*/
+	color:inherit;
+	text-decoration:none;
+}
+
+a:visited {
+	color:inherit;
+	/*color:#808285;*/
+}
+
+a:hover {
+	/*color:#808285;*/
+	text-decoration:underline;
+	cursor:pointer;
+}
+
+nav > a {
+	font-family:"Oswald";
+	display:inline-block;
+	float:right;
+	margin-left:15px;
+	font-size:12px;
+	line-height:30px;
+	font-weight:400;
+	letter-spacing:1px;
+	text-transform:uppercase;
+}
+
+div.footer > a {
+	font-family:"Oswald";
+	display:inline-block;
+	float:left; 
+	/*color:#25b8eb; */
+	font-size:18px;
+	line-height:30px; 
+	font-weight:400; 
+	letter-spacing:1px;
+}
+
+
+
+/* STRUCTURE */
+
+div#sectorwrapper {
+	position:absolute;
+	width:0px;
+	left:0px;
+	padding-left:80px;
+}
+
+.sectorwrappertransition {
+	-moz-transition-property: background-color, color, left;  
+	-moz-transition-duration: 1000ms;  
+	-webkit-transition-property: background-color, color, left;  
+	-webkit-transition-duration: 1000ms;  
+	-o-transition-property: background-color, color, left;  
+	-o-transition-duration: 1000ms;  
+}
+
+
+div#sectorwrapper > div {
+	position:relative;
+	float:left;
+
+}
+
+div#left-center {
+	width:1100px;	
+	height:100%;
+	margin-bottom:20%;
+}
+
+div.sector {
+	display:inline-block;
+	position:relative;
+}
+
+div#right {
+	top: 80px;
+	left: 40px;
+	width: 1080px;
+}
+
+div#left {
+	left:0px;
+	width:700px;
+}
+div#center {
+	left:700px;
+	width:400px;
+}
+
+div#statsbar {
+	/*position:absolute;*/
+	position:fixed;
+	width:100%;
+	left:0px;
+	height:8px;
+	z-index:200;
+	overflow:hidden;
+}
+
+div#statsbar > h3 {
+	color:white;
+	margin-left:80px;
+	margin-top:6px;
+}
+
+.activeStats {
+	height:40px;
+} 
+
+.bar {
+	position:fixed;
+	z-index:100;
+	border-style: solid;
+	border-width:0px;
+	margin-left:80px;
+	-moz-transition-property: background-color, color, margin-left;  
+	-moz-transition-duration: 1000ms;  
+	-webkit-transition-property: background-color, color, margin-left;  
+	-webkit-transition-duration: 1000ms;  
+	-o-transition-property: background-color, color, margin-left;  
+	-o-transition-duration: 1000ms;  
+	transition-property:  background-color, color, margin-left;
+	transition-duration: 1000ms;
+
+}
+
+#topbar {
+	top:8px;
+	height:160px;
+	width:1082px;
+	border-bottom-width:1px;
+}
+
+
+#bottombar {
+	bottom:0px;
+	height:40px;
+	width:620px;
+	border-top-width:1px;
+
+
+}
+
+
+header#question {
+	position:fixed;
+	top:8px;
+	left:80px;
+	width: 1100px;
+	height: 160px;
+	z-index:100;
+}
+
+
+header#question > h3 {
+	margin-top:70px;
+}
+
+
+
+
+/* LEFT */
+
+
+
+article.dab {
+	margin-top:180px;
+	width:620px;
+	margin-top:180px;
+	position:fixed;
+}
+
+
+.highlight {
+	padding:2px 5px;
+}
+
+
+div.filmstrip {
+	width:100%;
+	margin:40px 0px;
+}
+
+div.filmstrip_frame {
+	height:180px;
+	width:180px;
+	background-color:white;
+	border:1px solid #ccc;
+	padding:3px;
+	float:left;
+	margin-right:5px;
+}
+div.filmstrip_img {
+	width:100%;	
+	height:100%;
+	overflow:hidden;
+	min-height:100%;
+	min-width:100%;
+	max-height:150%;
+	max-width:150%;
+/*	background-position:center center;
+	background-size:350px;*/
+}
+
+div.filmstrip_img > img {
+	min-height:inherit;
+	min-width:inherit;
+	max-height:inherit;
+	max-width:inherit;
+}
+
+
+
+/* CENTER */
+ul#option_list {
+	height:400px;
+	width:100%;
+	padding:0px;
+	/*overflow-y:scroll;*/
+	margin-top:180px;
+	margin-bottom:400px;
+}
+
+ul#option_list > li {
+	display: inline-block;
+	width: 100%;
+	min-height: 60px;
+	margin: 2px 0px;
+	list-style-type: none;
+}
+
+ul#option_list > li > div {
+	float:left;
+}
+
+div.option {
+	padding: 10px 10px;
+	min-height:40px;
+	width: 288px;
+	display:inline-block;
+	/*background-color:#DAF0FC;*/
+	/*border-left:1px solid #25b8eb;*/
+}
+
+.opt_title {
+	font-size: 16px;
+	font-weight: bold;
+	line-height: 22px;
+	letter-spacing: 1px;
+	font-family: 'Oswald';
+	text-transform: uppercase;
+	/*color: #25B8EB;*/
+	font-weight: 400;
+}
+
+.opt_desc {
+	font-size:14px;
+	line-height:18px;
+	margin-left:3px;
+} 
+
+div.option:hover {
+	/*background-color:#25b8eb;
+	color:#ebf2f6;*/
+	cursor:pointer;
+}
+
+div.option:hover > .opt_title{
+	color:white;
+}
+
+li > .preview {
+	display:inline-block;
+	background:url('preview.png') no-repeat -3px -142px;
+	width: 72px;
+	height: 62px;
+	/*display:none;*/
+	visibility:collapse;
+}
+li > .preview:hover {
+	background-position: -3px -3px;
+}
+
+li > .viewing {
+	background-position: -3px -73px;
+	visibility:visible !important;
+}
+
+li > .viewing:hover {
+	background-position: -3px -73px;
+}
+
+li.active > .preview {
+	visibility:visible;
+	cursor:pointer;
+}
+
+svg:hover {
+	cursor:pointer;
+}
+
+
+/*  RIGHT  */
+iframe#wikipedia_preview {
+	position: fixed;
+	width: 1080px !important;
+	height: 85% !important;
+	margin: 80px 0px 0px 20px;
+	
+}
+
+
+/*PUZZLE*/
+
+
+div#puzzle {
+	position: relative;
+	width:1px;
+	overflow:visible;
+}
+
+div#eyeballs {
+	background: url('eyeballs-02.png') no-repeat -1px -1px;;
+	width: 79px;
+	height: 32px;
+	overflow:hidden;
+	position:absolute;
+	z-index:+5;
+	top:117px;
+	left:92px;
+}
+
+
+/* STUB PAGES */
+
+
+body.stub .sector {
+	margin-top:10px;
+	float: left;
+	position:relative;
+}
+
+body.stub #center {
+	/*left:none;*/
+	left:0px;
+}
+
+#stubtitle {
+	margin-top:105px;
+	width:1080px;
+	border-bottom-width:1px;
+	border-bottom-style: solid;
+	padding-bottom:15px;
+}
+
+body.stub #center div.filmstrip_frame {
+	width:320px;
+	height:320px;
+	float:right;
+	margin-right:20px;
+}

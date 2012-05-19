@@ -413,7 +413,7 @@ def test():
 
 if __name__ == '__main__':
     import time
-    dcount = 200
+    dcount = 2000
     start = time.time()
     print 'Saving a bunch (',dcount,') of Dabblets.'
     dabblets = save_a_bunch(dcount)

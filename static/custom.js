@@ -20,7 +20,6 @@ $(document).ready(function() {
 	            // TODO: error handling (jsonp doesn't get error() calls for a lot of errors)
 	        },
 	    };
-
 	    for (var key in kwargs) {
 	        if(kwargs.hasOwnProperty(key)) {
 	            all_kwargs[key] = kwargs[key];
@@ -29,32 +28,32 @@ $(document).ready(function() {
 	    $.ajax(all_kwargs);
 	}
 
-	do_query('http://localhost:8080/get/', page_setup);
+	function new_random() {
 
+		do_query('http://localhost:8080/next/', page_setup);
 
-	function page_setup(err, data){
-		console.log(data)
-
-		var dab 		= data;
-		var choices 	= dab.choices,
-			page_title	= dab.source_title,
-			dab_title	= dab.title,
-			dab_context	= dab.context,
-			images 		= dab.images;
-		$('#disambig_query').html(page_title);
-		$('#disambig_page').html(dab_title);
-		$('#context').html(dab_context);
-		$('span:contains("disambiguation")"').parents('sup').hide();
-		$('#option_list').empty();
-		for(var i = 0; i < choices.length; i++) {
-			$('#option_list').append('<li><div class="option med_bg"><span class="opt_title accent_text">' +  choices[i].title + '</span> - <span class="opt_desc">' + choices[i].text + '</span></div><div class="preview" link="http://en.m.wikipedia.org/wiki/' + choices[i].title.replace(' ', '_') + '"></div></li>');
+		function page_setup(err, data){
+			var dab 		= data.dabblet;
+			var choices 	= dab.choices,
+				page_title	= dab.source_title,
+				dab_title	= dab.title,
+				dab_context	= dab.context,
+				images 		= dab.images;
+			$('#disambig_page').html(page_title);
+			$('#disambig_query').html(dab_title);
+			$('#context').html(dab_context);
+			$('span:contains("disambiguation")"').parents('sup').hide();
+			$('#option_list').empty();
+			console.log(choices)
+			for(var i = 0; i < choices.length; i++) {
+				$('#option_list').append('<li><div class="option med_bg"><span class="opt_title accent_text">' +  choices[i].title + '</span> - <span class="opt_desc">' + choices[i].text + '</span></div><div class="preview" link="http://en.m.wikipedia.org/wiki/' + choices[i].title.replace(' ', '_') + '"></div></li>');
+			}
+			$('.filmstrip_img').empty();
+			for(var i = 0; i < images.length; i++) {
+				$('.filmstrip_img').append('<img src="' + images[i].replace('//', 'http://') + '"/>');
+			}
+			ready_the_options();
 		}
-		$('.filmstrip_img').empty();
-		for(var i = 0; i < images.length; i++) {
-			$('.filmstrip_img').append('<img src="' + images[i].replace('//', 'http://') + '"/>');
-		}
-
-		ready_the_options();
 	}
 
 // VARIABLES /////////////////////////////
@@ -78,7 +77,7 @@ $(document).ready(function() {
 
 // FUNCTIONS /////////////////////////////
 	function resetContent() {
-		
+		new_random();
 	}
 
 	function resetStats() {
@@ -114,14 +113,13 @@ $(document).ready(function() {
 				$('#sectorwrapper').addClass('sectorwrappertransition')
 			});
 		});
-
-
 	}
 
 	function colorChange(palette) {
+
 		statsbar.delay(fullDuration*.1).animate({height: 40}, fullDuration*.2).animate({
 		      backgroundColor: palette[2]
-		}, fullDuration*.6, function() {}).delay(fullDuration*.1).animate({height: 8}, fullDuration*.2);;
+		}, fullDuration*.6, function() {}).delay(fullDuration*.1).animate({height: 8}, fullDuration*.2);
 
 		$('body').animate({
 		      backgroundColor: palette[0]
@@ -136,21 +134,17 @@ $(document).ready(function() {
 			$('.med_text').css('color', med)
 			$('.accent_text').css('color', accent)
 			$('.accent_border').css('border-color', accent)
-
 		});
-
-		
 	}
 
 
 // BEHAVIORS ////////////////////////////////////////////////////
 
 	window.onscroll = function(e) {
-		console.log(e)
+
 	}
 	
 	ready_the_options = function() {
-
 
 		$('div.option').on({
 			click: function() {
@@ -202,18 +196,6 @@ $(document).ready(function() {
 				});
 			}
 		});
-		
-		back.on({
-			click: function(){
-				resetLeft();
-			}
-		});
-
-		$('#skip').on({
-			click: function(){
-				swipe(i);	
-			}
-		});
 
 		statsbar.on({
 			mouseenter: function(){
@@ -233,10 +215,19 @@ $(document).ready(function() {
 				$(this).removeClass('accent_text')
 		    }
 		});
-
 	}
+
+	back.on({
+	click: function(){
+			resetLeft();
+		}
+	});
+	console.log('register')
+	$('#skip').click(function(){
+			console.log('skip')
+			swipe(i);	
+	});
 // INITIALIZING THE PAGE ///////////////////////
-	ready_the_options();
 	resetContent();
 	// resetStats();
 
